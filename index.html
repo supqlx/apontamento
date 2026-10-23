@@ -1,12 +1,307 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Controle de Apontamento Diário</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-    iframe { border: none; width: 100%; height: 100%; }
+    /* Ocupa 100% da tela sem margens verticais ou horizontais */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      min-height: 100vh;
+      background-color: #0b132b;
+      color: #ffffff;
+      font-family: 'Segoe UI', sans-serif;
+      overflow-x: hidden;
+    }
+    .container-fluid {
+      padding: 20px;
+      max-width: 100% !important;
+    }
+    .card-custom { 
+      background-color: #1c2541; 
+      border: none; 
+      border-radius: 12px; 
+      padding: 20px; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+    }
+    .table-dark-custom { background-color: #233055; color: #fff; margin-bottom: 0; }
+    .table-dark-custom th { background-color: #0b132b; color: #4cc9f0; border-color: #2d3e6b; text-align: center; }
+    .table-dark-custom td { background-color: #1c2541; color: #fff; border-color: #2d3e6b; vertical-align: middle; }
+    .form-control, .form-select { background-color: #0b132b; color: #fff; border: 1px solid #2d3e6b; }
+    .form-control:focus, .form-select:focus { background-color: #0b132b; color: #fff; border-color: #4cc9f0; box-shadow: none; }
+    .turno-header { background-color: #3a506b !important; color: #ffffff; font-weight: bold; font-size: 1.1rem; padding: 10px 15px; border-radius: 6px; margin-top: 20px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .form-check-input { width: 1.3em; height: 1.3em; cursor: pointer; }
+    label, .form-label { color: #4cc9f0 !important; }
   </style>
 </head>
 <body>
-  <iframe src="https://script.google.com/macros/s/AKfycbwySjatxmsbmt-bNEtcQsFX5XLYc-wf5-_Bx-MqiwESAFwxGZq0UD1ZSxHo7UQum4xbww/exec"></iframe>
+
+  <div class="container-fluid">
+    <div class="card card-custom mb-4">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+          <h2 class="h4 mb-1 text-info">Controle de Apontamento Diário</h2>
+          <p class="text-muted small m-0 text-white">Marque os status manualmente ou utilize o preenchimento rápido por turno.</p>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalGerenciar">
+            ⚙️ Adicionar / Remover Funcionários
+          </button>
+        </div>
+      </div>
+      
+      <div class="row mt-3 align-items-center">
+        <div class="col-md-4">
+          <label for="dataApontamento" class="form-label fw-bold">DATA DO APONTAMENTO:</label>
+          <input type="date" id="dataApontamento" class="form-control">
+        </div>
+      </div>
+    </div>
+
+    <div id="conteudoTurnos">
+      <div class="text-center py-5">
+        <div class="spinner-border text-info" role="status"></div>
+        <p class="mt-2 text-white">A carregar dados do servidor...</p>
+      </div>
+    </div>
+
+    <div class="card card-custom mt-4 text-end" id="botaoSalvarDiv" style="display: none;">
+      <button type="button" class="btn btn-primary btn-lg px-5" onclick="salvarApontamentos()">
+        ✔ Registrar Todos os Apontamentos
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL GERENCIAR -->
+  <div class="modal fade" id="modalGerenciar" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content card-custom text-white" style="background-color: #1c2541;">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-info">Gestão de Funcionários</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <h6 class="text-warning">Adicionar Novo Funcionário</h6>
+          <div class="mb-3">
+            <label class="form-label">Nome Completo:</label>
+            <input type="text" id="novoNome" class="form-control" placeholder="Ex: JOÃO SILVA">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Horário / Turno:</label>
+            <input type="text" id="novoTurno" class="form-control" placeholder="Ex: 06h às 14h">
+          </div>
+          <button type="button" class="btn btn-success w-100 mb-4" onclick="adicionarFuncionarioApp()">Cadastrar Funcionário</button>
+          
+          <hr class="border-secondary">
+          
+          <h6 class="text-danger mt-3">Remover Funcionário</h6>
+          <div class="mb-3">
+            <label class="form-label">Selecione para Remover:</label>
+            <select id="selectRemover" class="form-select">
+              <option value="">A carregar...</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-danger w-100" onclick="removerFuncionarioApp()">Remover Funcionário</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // URL DO SEU GOOGLE APPS SCRIPT (IMPLANTADO COMO WEB APP)
+    const API_URL = "https://script.google.com/macros/s/AKfycbyt0-k9jkWcIHe4nQcgjyWe_PADniW1q1SLLB3gdPbHKcXIjllPyZVpRl7C-mQ1cp32_w/exec";
+
+    let totalFuncionarios = 0;
+
+    window.onload = function() {
+      document.getElementById('dataApontamento').valueAsDate = new Date();
+      carregarDados();
+    };
+
+    function carregarDados() {
+      fetch(`${API_URL}?action=getFuncionarios`)
+        .then(res => res.json())
+        .then(dados => {
+          renderizarTabelasPorTurno(dados);
+          popularSelectRemover(dados);
+        })
+        .catch(err => alert("Erro ao carregar dados: " + err.message));
+    }
+
+    function renderizarTabelasPorTurno(dados) {
+      const container = document.getElementById('conteudoTurnos');
+      container.innerHTML = '';
+
+      if (!dados || dados.length === 0) {
+        container.innerHTML = '<div class="alert alert-warning text-center">Nenhum funcionário cadastrado.</div>';
+        return;
+      }
+
+      const porTurno = {};
+      dados.forEach(item => {
+        const turno = item.turno || 'Geral';
+        if (!porTurno[turno]) porTurno[turno] = [];
+        porTurno[turno].push(item);
+      });
+
+      let globalIndex = 0;
+
+      for (const [turno, lista] of Object.entries(porTurno)) {
+        let htmlTurno = `
+          <div class="turno-header">
+            <span>⏱ Turno / Horário: ${turno}</span>
+            <button type="button" class="btn btn-sm btn-outline-light py-0 px-2" onclick="marcarTurnoTodos(${globalIndex}, ${lista.length})">Marcar Todos Presentes</button>
+          </div>
+          <div class="card card-custom p-0 overflow-hidden mb-4">
+            <div class="table-responsive">
+              <table class="table table-dark-custom table-hover">
+                <thead>
+                  <tr>
+                    <th class="text-start">Funcionário</th>
+                    <th style="width: 90px;">Presença</th>
+                    <th style="width: 90px;">Falta</th>
+                    <th style="width: 90px;">Atraso</th>
+                    <th style="width: 90px;">Saída</th>
+                    <th style="width: 220px;" class="text-start">Horas / Obs</th>
+                  </tr>
+                </thead>
+                <tbody>
+        `;
+
+        lista.forEach(func => {
+          htmlTurno += `
+            <tr>
+              <td>
+                <strong>${func.nome}</strong>
+                <input type="hidden" id="nome_${globalIndex}" value="${func.nome}">
+                <input type="hidden" id="turno_${globalIndex}" value="${turno}">
+              </td>
+              <td class="text-center"><input class="form-check-input" type="checkbox" id="presenca_${globalIndex}" onchange="ajustarCheckboxes(${globalIndex}, 'presenca')"></td>
+              <td class="text-center"><input class="form-check-input" type="checkbox" id="falta_${globalIndex}" onchange="ajustarCheckboxes(${globalIndex}, 'falta')"></td>
+              <td class="text-center"><input class="form-check-input" type="checkbox" id="atraso_${globalIndex}"></td>
+              <td class="text-center"><input class="form-check-input" type="checkbox" id="saida_${globalIndex}"></td>
+              <td><input type="text" class="form-control form-control-sm" id="obs_${globalIndex}" placeholder="Ex: 06h às 14h"></td>
+            </tr>
+          `;
+          globalIndex++;
+        });
+
+        htmlTurno += `</tbody></table></div></div>`;
+        container.innerHTML += htmlTurno;
+      }
+
+      totalFuncionarios = globalIndex;
+      document.getElementById('botaoSalvarDiv').style.display = 'block';
+    }
+
+    function popularSelectRemover(dados) {
+      const select = document.getElementById('selectRemover');
+      select.innerHTML = '<option value="">Selecione...</option>';
+      dados.forEach(item => {
+        let opt = document.createElement('option');
+        opt.value = item.nome;
+        opt.textContent = `${item.nome} (${item.turno})`;
+        select.appendChild(opt);
+      });
+    }
+
+    function ajustarCheckboxes(idx, tipo) {
+      const presenca = document.getElementById(`presenca_${idx}`);
+      const falta = document.getElementById(`falta_${idx}`);
+      if (tipo === 'presenca' && presenca.checked) falta.checked = false;
+      else if (tipo === 'falta' && falta.checked) {
+        presenca.checked = false;
+        document.getElementById(`atraso_${idx}`).checked = false;
+        document.getElementById(`saida_${idx}`).checked = false;
+      }
+    }
+
+    function marcarTurnoTodos(inicio, qtd) {
+      for (let i = inicio; i < inicio + qtd; i++) {
+        document.getElementById(`presenca_${i}`).checked = true;
+        document.getElementById(`falta_${i}`).checked = false;
+      }
+    }
+
+    function adicionarFuncionarioApp() {
+      const nome = document.getElementById('novoNome').value;
+      const turno = document.getElementById('novoTurno').value || "06h às 14h";
+      if (!nome) { alert("Insira o nome."); return; }
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "adicionarFuncionario", nome, turno })
+      })
+      .then(res => res.json())
+      .then(resp => {
+        alert(resp.mensagem);
+        location.reload();
+      });
+    }
+
+    function removerFuncionarioApp() {
+      const nome = document.getElementById('selectRemover').value;
+      if (!nome) { alert("Selecione um funcionário."); return; }
+      if (!confirm(`Remover ${nome}?`)) return;
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "removerFuncionario", nome })
+      })
+      .then(res => res.json())
+      .then(resp => {
+        alert(resp.mensagem);
+        location.reload();
+      });
+    }
+
+    function salvarApontamentos() {
+      const dataInput = document.getElementById('dataApontamento').value;
+      if (!dataInput) { alert("Selecione a data."); return; }
+
+      const partes = dataInput.split('-');
+      const dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
+
+      let apontamentos = [];
+      for (let i = 0; i < totalFuncionarios; i++) {
+        const nome = document.getElementById(`nome_${i}`).value;
+        const turno = document.getElementById(`turno_${i}`).value;
+        const presenca = document.getElementById(`presenca_${i}`).checked;
+        const falta = document.getElementById(`falta_${i}`).checked;
+        const atraso = document.getElementById(`atraso_${i}`).checked;
+        const saida = document.getElementById(`saida_${i}`).checked;
+        const obs = document.getElementById(`obs_${i}`).value;
+
+        let ocorrencias = [];
+        if (falta) {
+          ocorrencias.push("Falta");
+        } else if (presenca) {
+          ocorrencias.push("Presente");
+          if (atraso) ocorrencias.push("Atraso");
+          if (saida) ocorrencias.push("Saída Antecipada");
+        } else {
+          ocorrencias.push("Falta");
+        }
+
+        apontamentos.push({ data: dataFormatada, nome, turno, ocorrencia: ocorrencias.join(" + "), obs });
+      }
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "salvarLote", apontamentos })
+      })
+      .then(res => res.json())
+      .then(resp => {
+        alert(resp.mensagem);
+        location.reload();
+      })
+      .catch(err => alert("Erro ao salvar: " + err.message));
+    }
+  </script>
 </body>
 </html>
