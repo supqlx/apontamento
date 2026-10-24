@@ -28,9 +28,13 @@
       padding: 20px; 
       box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
     }
-    .stat-card h6, .stat-card .text-muted {
-      color: #4cc9f0 !important; /* Torna o texto visível e com destaque azul claro */
-      font-weight: 600;
+    .stat-card h6 {
+      color: #4cc9f0 !important;
+      font-weight: 700 !important;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
     }
     .form-control, .form-select { background-color: #0b132b; color: #fff; border: 1px solid #2d3e6b; }
     .form-control:focus, .form-select:focus { background-color: #0b132b; color: #fff; border-color: #4cc9f0; box-shadow: none; }
@@ -46,7 +50,7 @@
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
         <div>
           <h2 class="h4 mb-1 text-info">Relatórios e Análise de Desempenho</h2>
-          <p class="text-muted small m-0 text-white">Consulte presenças, faltas e horas líquidas acumuladas.</p>
+          <p class="small m-0 text-white">Consulte presenças, faltas e horas líquidas acumuladas.</p>
         </div>
         <div>
           <a href="index.html" class="btn btn-outline-light btn-sm">⬅ Voltar para Apontamentos</a>
@@ -92,19 +96,19 @@
     <div class="row g-4 mb-4">
       <div class="col-md-4">
         <div class="stat-card">
-          <h6 class="text-muted text-uppercase small">Dias Trabalhados (Presenças)</h6>
+          <h6 class="small">Dias Trabalhados (Presenças)</h6>
           <h2 id="cardPresencas" class="display-6 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
       <div class="col-md-4">
         <div class="stat-card" style="border-left-color: #f72585;">
-          <h6 class="text-muted text-uppercase small">Total de Faltas</h6>
+          <h6 class="small">Total de Faltas</h6>
           <h2 id="cardFaltas" class="display-6 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
       <div class="col-md-4">
         <div class="stat-card" style="border-left-color: #4361ee;">
-          <h6 class="text-muted text-uppercase small">Total de Horas Líquidas</h6>
+          <h6 class="small">Total de Horas Líquidas</h6>
           <h2 id="cardHoras" class="display-6 fw-bold text-white mb-0">0 hrs</h2>
         </div>
       </div>
@@ -200,7 +204,6 @@
         if (oc.includes("falta")) faltas++;
       });
 
-      // Cálculo de horas líquidas (jornada de 8h com desconto de 1h de almoço = 7h por presença)
       let horasLiquidas = presencas * 7;
 
       document.getElementById('cardPresencas').innerText = presencas;
