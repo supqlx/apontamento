@@ -217,11 +217,9 @@
         if (oc.includes("presente")) {
           presencas++;
           
-          let textoAnalise = obs + " " + oc;
-          let matchHoras = textoAnalise.match(/(\d+)\s*h/);
+          let matchHoras = obs.match(/(\d+)\s*h/);
           if (matchHoras) {
-            let horasDesconto = parseInt(matchHoras[1]) || 0;
-            totalHorasDescontadas += horasDesconto;
+            totalHorasDescontadas += parseInt(matchHoras[1]) || 0;
           }
         }
         if (oc.includes("falta")) {
