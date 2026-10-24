@@ -303,6 +303,11 @@
         const saida = document.getElementById(`saida_${i}`).checked;
         const obs = document.getElementById(`obs_${i}`).value;
 
+        // Ignora quem não teve nenhuma marcação para não lançar falta incorreta
+        if (!presenca && !falta && !atraso && !saida) {
+          continue;
+        }
+
         let ocorrencias = [];
         if (falta) {
           ocorrencias.push("Falta");
@@ -310,11 +315,14 @@
           ocorrencias.push("Presente");
           if (atraso) ocorrencias.push("Atraso");
           if (saida) ocorrencias.push("Saída Antecipada");
-        } else {
-          ocorrencias.push("Falta");
         }
 
         apontamentos.push({ data: dataFormatada, nome, turno, ocorrencia: ocorrencias.join(" + "), obs });
+      }
+
+      if (apontamentos.length === 0) {
+        alert("Nenhum apontamento foi marcado!");
+        return;
       }
 
       fetch(API_URL, {
