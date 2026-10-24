@@ -6,7 +6,6 @@
   <title>Controle de Apontamento Diário</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    /* Ocupa 100% da tela sem margens verticais ou horizontais */
     html, body {
       margin: 0;
       padding: 0;
@@ -187,7 +186,7 @@
               <td class="text-center"><input class="form-check-input" type="checkbox" id="falta_${globalIndex}" onchange="ajustarCheckboxes(${globalIndex}, 'falta')"></td>
               <td class="text-center"><input class="form-check-input" type="checkbox" id="atraso_${globalIndex}" onchange="ajustarCheckboxes(${globalIndex}, 'atraso')"></td>
               <td class="text-center"><input class="form-check-input" type="checkbox" id="saida_${globalIndex}" onchange="ajustarCheckboxes(${globalIndex}, 'saida')"></td>
-              <td><input type="text" class="form-control form-control-sm" id="obs_${globalIndex}" placeholder="Ex: 06h às 14h"></td>
+              <td><input type="text" class="form-control form-control-sm" id="obs_${globalIndex}" placeholder="Ex: 2h"></td>
             </tr>
           `;
           globalIndex++;
@@ -229,18 +228,18 @@
       } else if (tipo === 'atraso' && atraso.checked) {
         presenca.checked = true;
         falta.checked = false;
-        let horas = prompt("Informe a quantidade de horas ou o período do Atraso (Ex: 2h ou 06h às 08h):");
-        if (horas) {
-          obsInput.value = `Atraso: ${horas}`;
+        let horasNum = prompt("Informe quantas horas de atraso (Digite apenas o número, ex: 2):");
+        if (horasNum && !isNaN(horasNum)) {
+          obsInput.value = `Atraso: ${horasNum}h`;
         } else {
           atraso.checked = false;
         }
       } else if (tipo === 'saida' && saida.checked) {
         presenca.checked = true;
         falta.checked = false;
-        let horas = prompt("Informe a quantidade de horas ou o período da Saída Antecipada (Ex: 1h ou 13h às 14h):");
-        if (horas) {
-          obsInput.value = `Saída Antecipada: ${horas}`;
+        let horasNum = prompt("Informe quantas horas de saída antecipada (Digite apenas o número, ex: 1):");
+        if (horasNum && !isNaN(horasNum)) {
+          obsInput.value = `Saída Antecipada: ${horasNum}h`;
         } else {
           saida.checked = false;
         }
