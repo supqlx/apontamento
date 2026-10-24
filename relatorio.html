@@ -31,7 +31,7 @@
     .stat-card h6 {
       color: #4cc9f0 !important;
       font-weight: 700 !important;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       letter-spacing: 0.5px;
       margin-bottom: 8px;
       text-transform: uppercase;
@@ -50,7 +50,7 @@
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
         <div>
           <h2 class="h4 mb-1 text-info">Relatórios e Análise de Desempenho</h2>
-          <p class="small m-0 text-white">Consulte presenças, faltas e horas líquidas acumuladas.</p>
+          <p class="small m-0 text-white">Consulte presenças, faltas, horas líquidas e funcionários inativos.</p>
         </div>
         <div>
           <a href="index.html" class="btn btn-outline-light btn-sm">⬅ Voltar para Apontamentos</a>
@@ -93,24 +93,31 @@
       </div>
     </div>
 
-    <!-- CARDS DE MÉTRICAS -->
+    <!-- CARDS DE MÉTRICAS (4 COLUNAS) -->
     <div class="row g-4 mb-4">
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="stat-card">
           <h6 class="small">Dias Trabalhados (Presenças)</h6>
           <h2 id="cardPresencas" class="display-6 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="stat-card" style="border-left-color: #f72585;">
           <h6 class="small">Total de Faltas</h6>
           <h2 id="cardFaltas" class="display-6 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="stat-card" style="border-left-color: #4361ee;">
           <h6 class="small">Total de Horas Líquidas</h6>
           <h2 id="cardHoras" class="display-6 fw-bold text-white mb-0">0 hrs</h2>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card" style="border-left-color: #ff9f1c;">
+          <h6 class="small">Inativos / Demitidos</h6>
+          <h2 id="cardInativosTotal" class="fs-4 fw-bold text-white mb-1">0 inativos</h2>
+          <small id="cardInativosDetalhe" class="text-warning" style="font-size: 0.75rem;">0 hrs acumuladas</small>
         </div>
       </div>
     </div>
@@ -135,6 +142,7 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbyt0-k9jkWcIHe4nQcgjyWe_PADniW1q1SLLB3gdPbHKcXIjllPyZVpRl7C-mQ1cp32_w/exec";
     let dadosBrutosGlobal = [];
+    let dadosInativosGlobal = [];
     let chartAssiduos = null;
     let chartFaltosos = null;
 
@@ -143,14 +151,18 @@
     };
 
     function carregarDadosRelatorio() {
-      fetch(`${API_URL}?action=getRelatorio`)
-        .then(res => res.json())
-        .then(dados => {
-          dadosBrutosGlobal = dados;
-          popularSelectFuncionarios(dados);
-          atualizarRelatorio();
-        })
-        .catch(err => alert("Erro ao carregar dados do relatório: " + err.message));
+      // Carrega relatórios e inativos em simultâneo
+      Promise.all([
+        fetch(`${API_URL}?action=getRelatorio`).then(res => res.json()),
+        fetch(`${API_URL}?action=getInativos`).then(res => res.json())
+      ])
+      .then(([dadosRel, dadosInat]) => {
+        dadosBrutosGlobal = dadosRel;
+        dadosInativosGlobal = dadosInat;
+        popularSelectFuncionarios(dadosRel);
+        atualizarRelatorio();
+      })
+      .catch(err => alert("Erro ao carregar dados do relatório: " + err.message));
     }
 
     function popularSelectFuncionarios(dados) {
@@ -209,6 +221,14 @@
       document.getElementById('cardPresencas').innerText = presencas;
       document.getElementById('cardFaltas').innerText = faltas;
       document.getElementById('cardHoras').innerText = horasLiquidas + " hrs";
+
+      // Contabilizar Inativos
+      let totalInativosQtd = dadosInativosGlobal.length;
+      let totalHorasInativos = dadosInativosGlobal.reduce((acc, curr) => acc + (Number(curr.horas) || 0), 0);
+      let nomesInativos = dadosInativosGlobal.map(i => i.nome).join(', ');
+
+      document.getElementById('cardInativosTotal').innerText = `${totalInativosQtd} inativo(s)`;
+      document.getElementById('cardInativosDetalhe').innerText = totalInativosQtd > 0 ? `${totalHorasInativos} hrs | ${nomesInativos}` : "Nenhum registo";
 
       renderizarGraficos(dadosBrutosGlobal);
     }
