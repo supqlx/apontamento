@@ -103,10 +103,11 @@
           
           <h6 class="text-danger mt-3">Remover Funcionário</h6>
           <div class="mb-3">
-            <label class="form-label">Selecione para Remover:</label>
-            <select id="selectRemover" class="form-select">
-              <option value="">A carregar...</option>
-            </select>
+            <label class="form-label">Digite ou Selecione para Remover:</label>
+            <input type="text" id="selectRemover" class="form-control" list="listaRemover" placeholder="Comece a digitar o nome...">
+            <datalist id="listaRemover">
+              <option value="A carregar...">
+            </datalist>
           </div>
           <button type="button" class="btn btn-danger w-100" onclick="removerFuncionarioApp()">Remover Funcionário</button>
         </div>
@@ -201,13 +202,13 @@
     }
 
     function popularSelectRemover(dados) {
-      const select = document.getElementById('selectRemover');
-      select.innerHTML = '<option value="">Selecione...</option>';
-      dados.forEach(item => {
+      const datalist = document.getElementById('listaRemover');
+      const funcionarios = [...new Set(dados.map(item => item.nome))].sort();
+      datalist.innerHTML = '';
+      funcionarios.forEach(nome => {
         let opt = document.createElement('option');
-        opt.value = item.nome;
-        opt.textContent = `${item.nome} (${item.turno})`;
-        select.appendChild(opt);
+        opt.value = nome;
+        datalist.appendChild(opt);
       });
     }
 
@@ -270,9 +271,9 @@
     }
 
     function removerFuncionarioApp() {
-      const nome = document.getElementById('selectRemover').value;
-      if (!nome) { alert("Selecione um funcionário."); return; }
-      if (!confirm(`Remover ${nome}?`)) return;
+      const nome = document.getElementById('selectRemover').value.trim();
+      if (!nome) { alert("Selecione ou digite um funcionário."); return; }
+      if (!confirm(`Tem certeza que deseja remover ${nome}?`)) return;
 
       fetch(API_URL, {
         method: 'POST',
