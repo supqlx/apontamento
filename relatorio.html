@@ -60,9 +60,10 @@
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label fw-bold">Funcionário:</label>
-          <select id="filtroFuncionario" class="form-select" onchange="atualizarRelatorio()">
-            <option value="">A carregar...</option>
-          </select>
+          <input type="text" id="filtroFuncionario" class="form-control" list="listaFuncionarios" placeholder="Digite ou selecione o funcionário..." oninput="atualizarRelatorio()">
+          <datalist id="listaFuncionarios">
+            <option value="A carregar...">
+          </datalist>
         </div>
         <div class="col-md-3">
           <label class="form-label fw-bold">Mês:</label>
@@ -153,14 +154,13 @@
     }
 
     function popularSelectFuncionarios(dados) {
-      const select = document.getElementById('filtroFuncionario');
+      const datalist = document.getElementById('listaFuncionarios');
       const funcionarios = [...new Set(dados.map(item => item.nome))].sort();
-      select.innerHTML = '<option value="">Todos os Funcionários</option>';
+      datalist.innerHTML = '';
       funcionarios.forEach(nome => {
         let opt = document.createElement('option');
         opt.value = nome;
-        opt.textContent = nome;
-        select.appendChild(opt);
+        datalist.appendChild(opt);
       });
     }
 
@@ -172,7 +172,7 @@
     }
 
     function atualizarRelatorio() {
-      const funcFiltro = document.getElementById('filtroFuncionario').value;
+      const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
       const mesFiltro = document.getElementById('filtroMes').value;
       const dataFiltroInput = document.getElementById('filtroData').value;
 
@@ -183,7 +183,7 @@
       }
 
       let filtrados = dadosBrutosGlobal.filter(item => {
-        let matchFunc = !funcFiltro || item.nome === funcFiltro;
+        let matchFunc = !funcFiltro || (item.nome && item.nome.toUpperCase().includes(funcFiltro));
         let matchData = !dataFiltroFormatada || item.data === dataFiltroFormatada;
         let matchMes = true;
 
