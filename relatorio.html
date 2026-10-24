@@ -217,10 +217,24 @@
         if (oc.includes("presente")) {
           presencas++;
           
-          let matchHoras = obs.match(/(\d+)\s*h/);
-          if (matchHoras) {
-            totalHorasDescontadas += parseInt(matchHoras[1]) || 0;
+          let horasDesconto = 0;
+          if (obs.includes("atraso:") || obs.includes("saída antecipada:")) {
+            let matchH = obs.match(/(\d+)\s*h/);
+            if (matchH) {
+              horasDesconto = parseInt(matchH[1]) || 0;
+            }
+          } else if (obs.includes("às") || obs.includes("as")) {
+            let numeros = obs.match(/\d+/g);
+            if (numeros && numeros.length >= 2) {
+              let inicio = parseInt(numeros[0]);
+              let fim = parseInt(numeros[1]);
+              if (fim > inicio) {
+                horasDesconto = fim - inicio;
+              }
+            }
           }
+
+          totalHorasDescontadas += horasDesconto;
         }
         if (oc.includes("falta")) {
           faltas++;
