@@ -151,7 +151,6 @@
     };
 
     function carregarDadosRelatorio() {
-      // Carrega relatórios e inativos em simultâneo
       Promise.all([
         fetch(`${API_URL}?action=getRelatorio`).then(res => res.json()),
         fetch(`${API_URL}?action=getInativos`).then(res => res.json())
@@ -209,20 +208,34 @@
 
       let presencas = 0;
       let faltas = 0;
+      let totalHorasDescontadas = 0;
 
       filtrados.forEach(item => {
         const oc = (item.ocorrencia || "").toLowerCase();
-        if (oc.includes("presente")) presencas++;
-        if (oc.includes("falta")) faltas++;
+        const obs = (item.obs || "").toLowerCase();
+
+        if (oc.includes("presente")) {
+          presencas++;
+          
+          let textoAnalise = obs + " " + oc;
+          let matchHoras = textoAnalise.match(/(\d+)\s*h/);
+          if (matchHoras) {
+            let horasDesconto = parseInt(matchHoras[1]) || 0;
+            totalHorasDescontadas += horasDesconto;
+          }
+        }
+        if (oc.includes("falta")) {
+          faltas++;
+        }
       });
 
-      let horasLiquidas = presencas * 7;
+      let horasLiquidas = (presencas * 7) - totalHorasDescontadas;
+      if (horasLiquidas < 0) horasLiquidas = 0;
 
       document.getElementById('cardPresencas').innerText = presencas;
       document.getElementById('cardFaltas').innerText = faltas;
       document.getElementById('cardHoras').innerText = horasLiquidas + " hrs";
 
-      // Contabilizar Inativos
       let totalInativosQtd = dadosInativosGlobal.length;
       let totalHorasInativos = dadosInativosGlobal.reduce((acc, curr) => acc + (Number(curr.horas) || 0), 0);
       let nomesInativos = dadosInativosGlobal.map(i => i.nome).join(', ');
