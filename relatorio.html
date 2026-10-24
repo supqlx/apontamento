@@ -208,7 +208,7 @@
 
       let presencas = 0;
       let faltas = 0;
-      let totalHorasDescontadas = 0;
+      let totalMinutosDescontados = 0;
 
       filtrados.forEach(item => {
         const oc = (item.ocorrencia || "").toLowerCase();
@@ -217,32 +217,42 @@
         if (oc.includes("presente")) {
           presencas++;
           
-          let horasDesconto = 0;
-          if (obs.includes("atraso:") || obs.includes("saída antecipada:")) {
+          // Procura por horários no formato HH:MM (ex: 06:00 às 08:00)
+          let matchHoras = obs.match(/(\d{2}:\d{2})\s*às\s*(\d{2}:\d{2})/);
+          if (matchHoras) {
+            let inicioParts = matchHoras[1].split(':');
+            let fimParts = matchHoras[2].split(':');
+            
+            let minutosInicio = parseInt(inicioParts[0]) * 60 + parseInt(inicioParts[1]);
+            let minutosFim = parseInt(fimParts[0]) * 60 + parseInt(fimParts[1]);
+            
+            let diferencaMinutos = minutosFim - minutosInicio;
+            if (diferencaMinutos > 0) {
+              totalMinutosDescontados += diferencaMinutos;
+            }
+          } 
+          // Suporte a formatos antigos caso existam
+          else if (obs.includes("atraso:") || obs.includes("saída antecipada:")) {
             let matchH = obs.match(/(\d+)\s*h/);
             if (matchH) {
-              horasDesconto = parseInt(matchH[1]) || 0;
-            }
-          } else if (obs.includes("às") || obs.includes("as")) {
-            let numeros = obs.match(/\d+/g);
-            if (numeros && numeros.length >= 2) {
-              let inicio = parseInt(numeros[0]);
-              let fim = parseInt(numeros[1]);
-              if (fim > inicio) {
-                horasDesconto = fim - inicio;
-              }
+              totalMinutosDescontados += (parseInt(matchH[1]) || 0) * 60;
             }
           }
-
-          totalHorasDescontadas += horasDesconto;
         }
         if (oc.includes("falta")) {
           faltas++;
         }
       });
 
-      let horasLiquidas = (presencas * 7) - totalHorasDescontadas;
-      if (horasLiquidas < 0) horasLiquidas = 0;
+      // 7 horas padrão por dia = 425 ou 420 minutos (7 * 60 = 420 minutos)
+      let minutosTotaisTrabalho = (presencas * 420) - totalMinutosDescontados;
+      if (minutosTotaisTrabalho < 0) minutosTotaisTrabalho = 0;
+
+      let horasLiquidas = (minutosTotaisTrabalho / 60).toFixed(1);
+      // Remove o .0 se for inteiro para ficar limpo (ex: 5 em vez de 5.0)
+      if (horasLiquidas.endsWith('.0')) {
+        horasLiquidas = parseInt(horasLiquidas);
+      }
 
       document.getElementById('cardPresencas').innerText = presencas;
       document.getElementById('cardFaltas').innerText = faltas;
