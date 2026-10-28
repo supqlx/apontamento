@@ -109,8 +109,8 @@
       </div>
       <div class="col-md">
         <div class="stat-card" style="border-left-color: #ff5400;">
-          <h6 class="small">Taxa Absenteísmo</h6>
-          <h2 id="cardAbsenteismo" class="fs-3 fw-bold text-white mb-0">0%</h2>
+          <h6 class="small">Horas de Absenteísmo</h6>
+          <h2 id="cardAbsenteismo" class="fs-3 fw-bold text-white mb-0">0 hrs</h2>
         </div>
       </div>
       <div class="col-md">
@@ -244,10 +244,12 @@
         }
       });
 
-      // Cálculo avançado de Absenteísmo: considera faltas integrais + minutos perdidos por atrasos/saídas
-      let totalMinutosPrevistos = (presencas + faltas) * 420;
-      let totalMinutosPerdidos = (faltas * 420) + totalMinutosDescontados;
-      let taxaAbsenteismo = totalMinutosPrevistos > 0 ? ((totalMinutosPerdidos / totalMinutosPrevistos) * 100).toFixed(1) : 0;
+      // Total de minutos de absenteísmo = (Faltas * 420 minutos do turno) + minutos de atrasos/saídas
+      let totalMinutosAbsenteismo = (faltas * 420) + totalMinutosDescontados;
+      let horasAbsenteismo = (totalMinutosAbsenteismo / 60).toFixed(1);
+      if (horasAbsenteismo.endsWith('.0')) {
+        horasAbsenteismo = parseInt(horasAbsenteismo);
+      }
 
       let minutosTotaisTrabalho = (presencas * 420) - totalMinutosDescontados;
       if (minutosTotaisTrabalho < 0) minutosTotaisTrabalho = 0;
@@ -259,7 +261,7 @@
 
       document.getElementById('cardPresencas').innerText = presencas;
       document.getElementById('cardFaltas').innerText = faltas;
-      document.getElementById('cardAbsenteismo').innerText = taxaAbsenteismo + "%";
+      document.getElementById('cardAbsenteismo').innerText = horasAbsenteismo + " hrs";
       document.getElementById('cardHoras').innerText = horasLiquidas + " hrs";
 
       let totalInativosQtd = dadosInativosGlobal.length;
