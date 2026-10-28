@@ -43,18 +43,15 @@
     .table-dark-custom { background-color: #233055; color: #fff; margin-bottom: 0; }
     .table-dark-custom th { background-color: #0b132b; color: #4cc9f0; border-color: #2d3e6b; text-align: center; font-size: 0.85rem; }
     .table-dark-custom td { background-color: #1c2541; color: #fff; border-color: #2d3e6b; vertical-align: middle; font-size: 0.9rem; }
-    .form-control, .form-select { background-color: #0b132b; color: #fff; border: 1px solid #2d3e6b; text-align: center; }
+    .form-control, .form-select { background-color: #0b132b; color: #fff; border: 1px solid #2d3e6b; text-align: center; font-size: 0.85rem; }
     .form-control:focus, .form-select:focus { background-color: #0b132b; color: #fff; border-color: #4cc9f0; box-shadow: none; }
     .turno-header { background-color: #3a506b !important; color: #ffffff; font-weight: bold; font-size: 1rem; padding: 10px; border-radius: 6px; margin-top: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-    .form-check-input { width: 1.2em; height: 1.2em; cursor: pointer; }
     label, .form-label { color: #4cc9f0 !important; font-size: 0.9rem; }
     
-    /* Ajuste responsivo para os inputs de horário não cortarem */
     .time-container {
       display: flex;
       align-items: center;
       gap: 2px;
-      min-width: 170px;
     }
     .time-container input {
       padding: 2px 4px !important;
@@ -71,7 +68,7 @@
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
           <h2 class="h5 mb-1 text-info">Controle de Apontamento</h2>
-          <p class="small m-0 text-white">Selecione o turno para facilitar o preenchimento.</p>
+          <p class="small m-0 text-white">Selecione o status diretamente na frente de cada funcionário.</p>
         </div>
         <div class="d-flex gap-2">
           <a href="relatorio.html" class="btn btn-outline-info btn-sm">📊 Relatórios</a>
@@ -86,7 +83,7 @@
         </div>
         <div class="col-md-6 col-12">
           <label for="filtroTurnoSelect" class="form-label fw-bold mb-1">FILTRAR POR TURNO:</label>
-          <select id="filtroTurnoSelect" class="form-select" onchange="filtrarTurnoVisualizacao()">
+          <select id="filtroTurnoSelect" class="form-select" onchange="filtrarTurnoVisualizacao()" style="text-align: left;">
             <option value="todos">Visualizar Todos os Turnos</option>
           </select>
         </div>
@@ -101,7 +98,7 @@
       </div>
     </div>
 
-    <!-- BOTÃO SALVAR FIXO/DESTACADO -->
+    <!-- BOTÃO SALVAR -->
     <div class="card card-custom mt-3 mb-4 text-center" id="botaoSalvarDiv" style="display: none;">
       <button type="button" class="btn btn-primary btn-lg w-100 py-3 fw-bold" onclick="salvarApontamentos()">
         ✔ REGISTRAR APONTAMENTOS
@@ -147,7 +144,6 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbyt0-k9jkWcIHe4nQcgjyWe_PADniW1q1SLLB3gdPbHKcXIjllPyZVpRl7C-mQ1cp32_w/exec";
     let totalFuncionarios = 0;
-    let dadosGlobaisFuncionarios = [];
 
     window.onload = function() {
       document.getElementById('dataApontamento').valueAsDate = new Date();
@@ -158,7 +154,6 @@
       fetch(`${API_URL}?action=getFuncionarios`)
         .then(res => res.json())
         .then(dados => {
-          dadosGlobaisFuncionarios = dados;
           popularSelectTurnos(dados);
           renderizarTabelasPorTurno(dados);
           popularSelectRemover(dados);
@@ -218,19 +213,16 @@
         let htmlTurno = `
           <div class="turno-header">
             <span>⏱ ${turno}</span>
-            <button type="button" class="btn btn-sm btn-outline-light py-0 px-2" onclick="marcarTurnoTodos(${globalIndex}, ${lista.length})">Marcar Todos</button>
+            <button type="button" class="btn btn-sm btn-outline-light py-0 px-2" onclick="marcarTurnoTodos(${globalIndex}, ${lista.length})">Marcar Todos Presentes</button>
           </div>
           <div class="card card-custom p-0 overflow-hidden mb-3">
             <div class="table-responsive">
-              <table class="table table-dark-custom table-hover">
+              <table class="table table-dark-custom table-hover align-middle">
                 <thead>
                   <tr>
-                    <th class="text-start ps-2">Funcionário</th>
-                    <th style="width: 50px;">Pres.</th>
-                    <th style="width: 50px;">Falta</th>
-                    <th style="width: 50px;">Atraso</th>
-                    <th style="width: 50px;">Saída</th>
-                    <th style="width: 170px;" class="text-start">Início às Fim</th>
+                    <th class="text-start ps-2" style="width: 35%;">Funcionário</th>
+                    <th class="text-start" style="width: 30%;">Status</th>
+                    <th class="text-start" style="width: 35%;">Início às Fim</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -244,10 +236,15 @@
                 <input type="hidden" id="nome_${globalIndex}" value="${func.nome}">
                 <input type="hidden" id="turno_${globalIndex}" value="${turno}">
               </td>
-              <td class="text-center"><input class="form-check-input" type="checkbox" id="presenca_${globalIndex}" onchange="ajustarCheckboxes(${globalIndex}, 'presenca')"></td>
-              <td class="text-center"><input class="form-check-input" type="checkbox" id="falta_${globalIndex}" onchange="ajustarCheckboxes(${globalIndex}, 'falta')"></td>
-              <td class="text-center"><input class="form-check-input" type="checkbox" id="atraso_${globalIndex}" onchange="ajustarCheckboxes(${globalIndex}, 'atraso')"></td>
-              <td class="text-center"><input class="form-check-input" type="checkbox" id="saida_${globalIndex}" onchange="ajustarCheckboxes(${globalIndex}, 'saida')"></td>
+              <td>
+                <select class="form-select form-select-sm" id="status_${globalIndex}" onchange="mudarStatus(${globalIndex})">
+                  <option value="pendente">Selecione...</option>
+                  <option value="presente">Presente</option>
+                  <option value="falta">Falta</option>
+                  <option value="atraso">Atraso</option>
+                  <option value="saida">Saída Antecipada</option>
+                </select>
+              </td>
               <td>
                 <div id="container_obs_${globalIndex}" class="time-container" style="display: none !important;">
                   <input type="time" class="form-control" id="hInicio_${globalIndex}">
@@ -280,39 +277,20 @@
       });
     }
 
-    function ajustarCheckboxes(idx, tipo) {
-      const presenca = document.getElementById(`presenca_${idx}`);
-      const falta = document.getElementById(`falta_${idx}`);
-      const atraso = document.getElementById(`atraso_${idx}`);
-      const saida = document.getElementById(`saida_${idx}`);
+    function mudarStatus(idx) {
+      const status = document.getElementById(`status_${idx}`).value;
       const containerObs = document.getElementById(`container_obs_${idx}`);
 
-      if (tipo === 'presenca' && presenca.checked) {
-        falta.checked = false;
-      } else if (tipo === 'falta' && falta.checked) {
-        presenca.checked = false;
-        atraso.checked = false;
-        saida.checked = false;
+      if (status === 'atraso' || status === 'saida') {
+        containerObs.style.display = 'flex';
+      } else {
         containerObs.style.display = 'none';
-      } else if (tipo === 'atraso' || tipo === 'saida') {
-        if (atraso.checked || saida.checked) {
-          presenca.checked = true;
-          falta.checked = false;
-          containerObs.style.display = 'flex';
-        } else {
-          if (!atraso.checked && !saida.checked) {
-            containerObs.style.display = 'none';
-          }
-        }
       }
     }
 
     function marcarTurnoTodos(inicio, qtd) {
       for (let i = inicio; i < inicio + qtd; i++) {
-        document.getElementById(`presenca_${i}`).checked = true;
-        document.getElementById(`falta_${i}`).checked = false;
-        document.getElementById(`atraso_${i}`).checked = false;
-        document.getElementById(`saida_${i}`).checked = false;
+        document.getElementById(`status_${i}`).value = 'presente';
         document.getElementById(`container_obs_${i}`).style.display = 'none';
       }
     }
@@ -360,34 +338,29 @@
       for (let i = 0; i < totalFuncionarios; i++) {
         const nome = document.getElementById(`nome_${i}`).value;
         const turno = document.getElementById(`turno_${i}`).value;
-        const presenca = document.getElementById(`presenca_${i}`).checked;
-        const falta = document.getElementById(`falta_${i}`).checked;
-        const atraso = document.getElementById(`atraso_${i}`).checked;
-        const saida = document.getElementById(`saida_${i}`).checked;
+        const status = document.getElementById(`status_${i}`).value;
         
         const hInicio = document.getElementById(`hInicio_${i}`).value;
         const hFim = document.getElementById(`hFim_${i}`).value;
 
-        if (!presenca && !falta && !atraso && !saida) continue;
+        if (status === 'pendente') continue;
 
-        let ocorrencias = [];
+        let ocorrencia = "";
         let obsTexto = "";
 
-        if (falta) {
-          ocorrencias.push("Falta");
-        } else if (presenca) {
-          ocorrencias.push("Presente");
-          if (atraso && hInicio && hFim) {
-            ocorrencias.push("Atraso");
-            obsTexto = `Atraso: ${hInicio} às ${hFim}`;
-          }
-          if (saida && hInicio && hFim) {
-            ocorrencias.push("Saída Antecipada");
-            obsTexto = `Saída Antecipada: ${hInicio} às ${hFim}`;
-          }
+        if (status === 'presente') {
+          ocorrencia = "Presente";
+        } else if (status === 'falta') {
+          ocorrencia = "Falta";
+        } else if (status === 'atraso') {
+          ocorrencia = "Presente + Atraso";
+          if (hInicio && hFim) obsTexto = `Atraso: ${hInicio} às ${hFim}`;
+        } else if (status === 'saida') {
+          ocorrencia = "Presente + Saída Antecipada";
+          if (hInicio && hFim) obsTexto = `Saída Antecipada: ${hInicio} às ${hFim}`;
         }
 
-        apontamentos.push({ data: dataFormatada, nome, turno, ocorrencia: ocorrencias.join(" + "), obs: obsTexto });
+        apontamentos.push({ data: dataFormatada, nome, turno, ocorrencia, obs: obsTexto });
       }
 
       if (apontamentos.length === 0) {
