@@ -223,6 +223,7 @@
         if (oc.includes("presente")) {
           presencas++;
           
+          // Tenta ler o formato novo de intervalo (HH:MM às HH:MM)
           let matchHoras = obs.match(/(\d{2}:\d{2})\s*às\s*(\d{2}:\d{2})/);
           if (matchHoras) {
             let minutosInicio = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
@@ -232,7 +233,8 @@
               totalMinutosDescontados += diferencaMinutos;
             }
           } 
-          else if (obs.includes("atraso:") || obs.includes("saída antecipada:")) {
+          // Tenta ler formato antigo escrito em horas (ex: "2h")
+          else {
             let matchH = obs.match(/(\d+)\s*h/);
             if (matchH) {
               totalMinutosDescontados += (parseInt(matchH[1]) || 0) * 60;
@@ -244,7 +246,6 @@
         }
       });
 
-      // Cálculo da Taxa de Absenteísmo: (Faltas / Total de Registos de Presença e Falta) * 100
       let totalApontamentosValidos = presencas + faltas;
       let taxaAbsenteismo = totalApontamentosValidos > 0 ? ((faltas / totalApontamentosValidos) * 100).toFixed(1) : 0;
 
