@@ -138,7 +138,7 @@
       </div>
       <div class="col-md-6">
         <div class="card card-custom">
-          <h5 class="text-danger mb-3">⚠️ Top Maiores Faltosos</h5>
+          <h5 class="text-danger mb-3">⚠️ Top Maiores Faltosos / Ocorrências</h5>
           <canvas id="graficoFaltosos" height="140"></canvas>
         </div>
       </div>
@@ -244,7 +244,6 @@
         }
       });
 
-      // Total de minutos de absenteísmo = (Faltas * 420 minutos do turno) + minutos de atrasos/saídas
       let totalMinutosAbsenteismo = (faltas * 420) + totalMinutosDescontados;
       let horasAbsenteismo = (totalMinutosAbsenteismo / 60).toFixed(1);
       if (horasAbsenteismo.endsWith('.0')) {
@@ -280,10 +279,13 @@
 
       dados.forEach(item => {
         const oc = (item.ocorrencia || "").toLowerCase();
+        
         if (oc.includes("presente")) {
           contagemPresenca[item.nome] = (contagemPresenca[item.nome] || 0) + 1;
         }
-        if (oc.includes("falta")) {
+        
+        // Conta faltas ou ocorrências de atraso / saída antecipada no Top Faltosos
+        if (oc.includes("falta") || oc.includes("atraso") || oc.includes("saída")) {
           contagemFalta[item.nome] = (contagemFalta[item.nome] || 0) + 1;
         }
       });
@@ -309,7 +311,7 @@
         type: 'bar',
         data: {
           labels: topFaltosos.map(i => i[0]),
-          datasets: [{ label: 'Faltas', data: topFaltosos.map(i => i[1]), backgroundColor: '#f72585' }]
+          datasets: [{ label: 'Faltas e Ocorrências', data: topFaltosos.map(i => i[1]), backgroundColor: '#f72585' }]
         },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, x: { ticks: { color: '#fff' }, grid: { display: false } } } }
       });
