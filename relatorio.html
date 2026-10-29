@@ -131,7 +131,7 @@
       </div>
     </div>
 
-    <!-- TABELA DE RELATÓRIO DETALHADO POR FUNCIONÁRIO (EXIBIDA APENAS QUANDO FILTRADO) -->
+    <!-- TABELA DE RELATÓRIO DETALHADO POR FUNCIONÁRIO -->
     <div class="card card-custom mb-4" id="cardTabelaDetalhada" style="display: none;">
       <h5 class="text-info mb-3">📋 Relatório Detalhado: <span id="nomeFuncionarioSelecionado" class="text-white"></span></h5>
       <div class="table-responsive">
@@ -204,6 +204,18 @@
       });
     }
 
+    function formatarDataExibicao(dataStr) {
+      if (!dataStr) return '';
+      // Se vier no formato ISO do Sheets (ex: 2026-10-28T03:00:00.000Z)
+      if (dataStr.includes('T')) {
+        let partesData = dataStr.split('T')[0].split('-');
+        if (partesData.length === 3) {
+          return `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
+        }
+      }
+      return dataStr;
+    }
+
     function limparFiltros() {
       document.getElementById('filtroFuncionario').value = "";
       document.getElementById('filtroMes').value = "todos";
@@ -224,11 +236,12 @@
 
       let filtrados = dadosBrutosGlobal.filter(item => {
         let matchFunc = !funcFiltro || (item.nome && item.nome.toUpperCase().includes(funcFiltro));
-        let matchData = !dataFiltroFormatada || item.data === dataFiltroFormatada;
+        let dataLimpa = formatarDataExibicao(item.data);
+        let matchData = !dataFiltroFormatada || dataLimpa === dataFiltroFormatada;
         let matchMes = true;
 
-        if (mesFiltro !== "todos" && item.data) {
-          const mesItem = item.data.split('/')[1];
+        if (mesFiltro !== "todos" && dataLimpa) {
+          const mesItem = dataLimpa.split('/')[1];
           matchMes = (mesItem === mesFiltro);
         }
 
@@ -293,7 +306,6 @@
       document.getElementById('cardInativosTotal').innerText = `${totalInativosQtd} inativo(s)`;
       document.getElementById('cardInativosDetalhe').innerText = totalInativosQtd > 0 ? `${totalHorasInativos} hrs | ${nomesInativos}` : "Nenhum registo";
 
-      // Controlar exibição da tabela detalhada por funcionário
       const cardTabela = document.getElementById('cardTabelaDetalhada');
       const corpoTabela = document.getElementById('corpoTabelaDetalhada');
       const spanNomeFunc = document.getElementById('nomeFuncionarioSelecionado');
@@ -309,7 +321,7 @@
           filtrados.forEach(reg => {
             corpoTabela.innerHTML += `
               <tr>
-                <td class="text-center">${reg.data}</td>
+                <td class="text-center">${formatarDataExibicao(reg.data)}</td>
                 <td class="text-center">${reg.turno || '-'}</td>
                 <td class="text-center fw-bold">${reg.ocorrencia}</td>
                 <td>${reg.obs || 'Nenhuma observação'}</td>
