@@ -48,7 +48,7 @@
 <body>
 
   <div class="container-fluid">
-    <!-- CABEÇALHO E FILTROS -->
+    <!-- CABEÇALHO E FILTROS GERAIS -->
     <div class="card card-custom mb-4">
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
         <div>
@@ -100,7 +100,7 @@
     <div class="row g-3 mb-4">
       <div class="col-md">
         <div class="stat-card">
-          <h6 class="small">Presenças</h6>
+          <h6 class="small">Dias Trabalhados</h6>
           <h2 id="cardPresencas" class="fs-3 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
@@ -149,6 +149,18 @@
       </div>
     </div>
 
+    <!-- SELETOR DE TURNO ESPECÍFICO PARA OS GRÁFICOS -->
+    <div class="card card-custom mb-3 py-3">
+      <div class="row align-items-center">
+        <div class="col-md-4">
+          <label for="filtroTurnoGraficos" class="form-label fw-bold mb-1">🔍 FILTRAR GRÁFICOS POR TURNO:</label>
+          <select id="filtroTurnoGraficos" class="form-select form-select-sm" onchange="atualizarRelatorio()">
+            <option value="todos">Visualizar Todos os Turnos</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
     <!-- GRÁFICOS HORIZONTAIS -->
     <div class="row g-4">
       <div class="col-md-6">
@@ -190,6 +202,7 @@
         dadosBrutosGlobal = dadosRel;
         dadosInativosGlobal = dadosInat;
         popularSelectFuncionarios(dadosRel);
+        popularSelectTurnosGraficos(dadosRel);
         atualizarRelatorio();
       })
       .catch(err => alert("Erro ao carregar dados do relatório: " + err.message));
@@ -203,6 +216,19 @@
         let opt = document.createElement('option');
         opt.value = nome;
         datalist.appendChild(opt);
+      });
+    }
+
+    function popularSelectTurnosGraficos(dados) {
+      const select = document.getElementById('filtroTurnoGraficos');
+      const turnos = [...new Set(dados.map(item => item.turno || 'Geral'))].sort();
+      
+      select.innerHTML = '<option value="todos">Visualizar Todos os Turnos</option>';
+      turnos.forEach(turno => {
+        let opt = document.createElement('option');
+        opt.value = turno;
+        opt.innerText = `Turno: ${turno}`;
+        select.appendChild(opt);
       });
     }
 
@@ -221,6 +247,7 @@
       document.getElementById('filtroFuncionario').value = "";
       document.getElementById('filtroMes').value = "todos";
       document.getElementById('filtroData').value = "";
+      document.getElementById('filtroTurnoGraficos').value = "todos";
       atualizarRelatorio();
     }
 
@@ -228,6 +255,7 @@
       const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
       const mesFiltro = document.getElementById('filtroMes').value;
       const dataFiltroInput = document.getElementById('filtroData').value;
+      const turnoGraficoFiltro = document.getElementById('filtroTurnoGraficos').value;
 
       let dataFiltroFormatada = "";
       if (dataFiltroInput) {
@@ -323,13 +351,18 @@
         cardTabela.style.display = 'none';
       }
 
-      renderizarGraficos(dadosBrutosGlobal);
+      renderizarGraficos(dadosBrutosGlobal, turnoGraficoFiltro);
     }
 
-    function renderizarGraficos(dados) {
+    function renderizarGraficos(dados, turnoFiltro) {
       const estatisticasPorNome = {};
 
       dados.forEach(item => {
+        const turnoItem = item.turno || 'Geral';
+        if (turnoFiltro !== 'todos' && turnoItem !== turnoFiltro) {
+          return; // Ignora se não pertencer ao turno selecionado no menu suspenso
+        }
+
         const nome = item.nome;
         if (!estatisticasPorNome[nome]) {
           estatisticasPorNome[nome] = { presencas: 0, faltas: 0, ocorrencias: 0, minutosPerdidos: 0 };
@@ -359,7 +392,6 @@
         }
       });
 
-      // Ordenar e listar todos os funcionários
       const listaAssiduos = Object.entries(estatisticasPorNome)
         .map(([nome, obj]) => [nome, obj.presencas])
         .sort((a,b) => b[1] - a[1]);
@@ -379,7 +411,7 @@
           datasets: [{ label: 'Presenças', data: listaAssiduos.map(i => i[1]), backgroundColor: '#4cc9f0' }]
         },
         options: { 
-          indexAxis: 'y', // GRÁFICO HORIZONTAL
+          indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
           plugins: { 
@@ -413,7 +445,7 @@
           datasets: [{ label: 'Ocorrências', data: listaFaltosos.map(i => i[1]), backgroundColor: '#f72585' }]
         },
         options: { 
-          indexAxis: 'y', // GRÁFICO HORIZONTAL
+          indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
           plugins: { 
