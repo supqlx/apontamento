@@ -61,10 +61,11 @@
         <!-- FUNCIONÁRIO -->
         <div class="mb-3">
           <label class="form-label">Funcionário:</label>
-          <input type="text" id="nome" class="form-control" list="listaFuncionarios" placeholder="Selecione ou digite o nome..." required>
+          <input type="text" id="nome" class="form-control" list="listaFuncionarios" placeholder="Digite ou selecione o nome..." required>
           <datalist id="listaFuncionarios">
-            <option value="A carregar...">
+            <!-- Preenchido via script -->
           </datalist>
+          <small class="text-muted" style="font-size: 0.75rem;">Pode digitar um novo nome diretamente se não estiver na lista.</small>
         </div>
 
         <!-- TURNO -->
@@ -106,7 +107,6 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbyt0-k9jkWcIHe4nQcgjyWe_PADniW1q1SLLB3gdPbHKcXIjllPyZVpRl7C-mQ1cp32_w/exec";
 
     window.onload = function() {
-      // Define a data de hoje por defeito no input
       document.getElementById('data').valueAsDate = new Date();
       carregarListaFuncionarios();
     };
@@ -116,15 +116,17 @@
         .then(res => res.json())
         .then(dados => {
           const datalist = document.getElementById('listaFuncionarios');
-          const funcionarios = [...new Set(dados.map(item => item.nome))].sort();
           datalist.innerHTML = '';
-          funcionarios.forEach(nome => {
-            let opt = document.createElement('option');
-            opt.value = nome;
-            datalist.appendChild(opt);
-          });
+          if (Array.isArray(dados) && dados.length > 0) {
+            const funcionarios = [...new Set(dados.map(item => item.nome).filter(Boolean))].sort();
+            funcionarios.forEach(nome => {
+              let opt = document.createElement('option');
+              opt.value = nome;
+              datalist.appendChild(opt);
+            });
+          }
         })
-        .catch(err => console.error("Erro ao carregar lista de funcionários:", err));
+        .catch(err => console.log("Aviso: Nenhum registo anterior encontrado para sugestão automática."));
     }
 
     function verificarOcorrencia() {
@@ -156,7 +158,6 @@
       btn.disabled = true;
       btn.innerText = "A guardar...";
 
-      // Formatar a data de AAAA-MM-DD para DD/MM/AAAA para manter padrão na planilha
       const dataRaw = document.getElementById('data').value;
       const partes = dataRaw.split('-');
       const dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
