@@ -351,19 +351,26 @@
         cardTabela.style.display = 'none';
       }
 
-      renderizarGraficos(dadosBrutosGlobal, turnoGraficoFiltro);
+      // Passa também o filtro do funcionário para os gráficos
+      renderizarGraficos(dadosBrutosGlobal, turnoGraficoFiltro, funcFiltro);
     }
 
-    function renderizarGraficos(dados, turnoFiltro) {
+    function renderizarGraficos(dados, turnoFiltro, funcFiltro) {
       const estatisticasPorNome = {};
 
       dados.forEach(item => {
         const turnoItem = item.turno || 'Geral';
         if (turnoFiltro !== 'todos' && turnoItem !== turnoFiltro) {
-          return; // Ignora se não pertencer ao turno selecionado no menu suspenso
+          return; 
         }
 
         const nome = item.nome;
+        
+        // Se houver um filtro de funcionário ativo, ignora os outros nomes nos gráficos
+        if (funcFiltro && !nome.toUpperCase().includes(funcFiltro)) {
+          return;
+        }
+
         if (!estatisticasPorNome[nome]) {
           estatisticasPorNome[nome] = { presencas: 0, faltas: 0, ocorrencias: 0, minutosPerdidos: 0 };
         }
