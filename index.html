@@ -1,9 +1,22 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b132b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('PWA pronto!'))
+        .catch((err) => console.log('Erro no PWA:', err));
+    }
+  </script>
+  
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Controle de Apontamentos - Operação</title>
+  <title>Controle de Apontamento Diário</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     html, body {
@@ -14,188 +27,357 @@
       background-color: #0b132b;
       color: #ffffff;
       font-family: 'Segoe UI', sans-serif;
+      overflow-x: hidden;
     }
-    .container {
-      max-width: 600px;
-      padding: 20px;
-      margin-top: 20px;
+    .container-fluid {
+      padding: 15px;
+      max-width: 100% !important;
     }
     .card-custom { 
       background-color: #1c2541; 
       border: none; 
       border-radius: 12px; 
-      padding: 25px; 
-      box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
+      padding: 15px; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
     }
-    .form-control, .form-select { 
-      background-color: #0b132b; 
-      color: #fff; 
-      border: 1px solid #2d3e6b; 
+    .table-dark-custom { background-color: #233055; color: #fff; margin-bottom: 0; }
+    .table-dark-custom th { background-color: #0b132b; color: #4cc9f0; border-color: #2d3e6b; text-align: center; font-size: 0.85rem; }
+    .table-dark-custom td { background-color: #1c2541; color: #fff; border-color: #2d3e6b; vertical-align: middle; font-size: 0.9rem; }
+    .form-control, .form-select { background-color: #0b132b; color: #fff; border: 1px solid #2d3e6b; text-align: center; font-size: 0.85rem; }
+    .form-control:focus, .form-select:focus { background-color: #0b132b; color: #fff; border-color: #4cc9f0; box-shadow: none; }
+    .turno-header { background-color: #3a506b !important; color: #ffffff; font-weight: bold; font-size: 1rem; padding: 10px; border-radius: 6px; margin-top: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    label, .form-label { color: #4cc9f0 !important; font-size: 0.9rem; }
+    
+    .time-container {
+      display: flex;
+      align-items: center;
+      gap: 2px;
     }
-    .form-control:focus, .form-select:focus { 
-      background-color: #0b132b; 
-      color: #fff; 
-      border-color: #4cc9f0; 
-      box-shadow: none; 
+    .time-container input {
+      padding: 2px 4px !important;
+      font-size: 0.75rem !important;
+      height: 30px;
     }
-    /* Estilo para garantir que as opções do select fiquem visíveis e legíveis em qualquer dispositivo */
-    .form-select option {
-      background-color: #1c2541;
-      color: #ffffff;
-      padding: 10px;
-    }
-    label, .form-label { color: #4cc9f0 !important; font-weight: 600; }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <div class="card card-custom">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="h5 text-info m-0">📝 Registo de Apontamento Diário</h3>
-        <a href="relatorio.html" class="btn btn-outline-light btn-sm">📊 Ver Relatórios</a>
+  <div class="container-fluid">
+    <!-- CABEÇALHO -->
+    <div class="card card-custom mb-3">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h2 class="h5 mb-1 text-info">Controle de Apontamento</h2>
+          <p class="small m-0 text-white">Selecione o status diretamente na frente de cada funcionário.</p>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="relatorio.html" class="btn btn-outline-info btn-sm">📊 Relatórios</a>
+          <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalGerenciar">⚙️ Funcionários</button>
+        </div>
       </div>
-
-      <form id="formApontamento" onsubmit="enviarApontamento(event)">
-        
-        <!-- DATA -->
-        <div class="mb-3">
-          <label class="form-label">Data:</label>
-          <input type="date" id="data" class="form-control" required>
+      
+      <div class="row mt-3 g-2 align-items-center">
+        <div class="col-md-6 col-12">
+          <label for="dataApontamento" class="form-label fw-bold mb-1">DATA:</label>
+          <input type="date" id="dataApontamento" class="form-control" style="text-align: left;">
         </div>
-
-        <!-- FUNCIONÁRIO -->
-        <div class="mb-3">
-          <label class="form-label">Funcionário:</label>
-          <input type="text" id="nome" class="form-control" list="listaFuncionarios" placeholder="Digite ou selecione o nome..." required>
-          <datalist id="listaFuncionarios">
-            <!-- Preenchido via script -->
-          </datalist>
-          <small class="text-muted" style="font-size: 0.75rem;">Pode digitar um novo nome diretamente se não estiver na lista.</small>
-        </div>
-
-        <!-- TURNO -->
-        <div class="mb-3">
-          <label class="form-label">Turno:</label>
-          <select id="turno" class="form-select" required>
-            <option value="" disabled selected>Selecione o turno...</option>
-            <option value="06h às 14h">06h às 14h</option>
-            <option value="14h às 22h">14h às 22h</option>
-            <option value="22h às 06h">22h às 06h</option>
+        <div class="col-md-6 col-12">
+          <label for="filtroTurnoSelect" class="form-label fw-bold mb-1">FILTRAR POR TURNO:</label>
+          <select id="filtroTurnoSelect" class="form-select" onchange="filtrarTurnoVisualizacao()" style="text-align: left;">
+            <option value="todos">Visualizar Todos os Turnos</option>
           </select>
         </div>
+      </div>
+    </div>
 
-        <!-- STATUS / OCORRÊNCIA -->
-        <div class="mb-3">
-          <label class="form-label">Status / Ocorrência:</label>
-          <select id="ocorrencia" class="form-select" onchange="verificarOcorrencia()" required>
-            <option value="Presente">Presente (Normal)</option>
-            <option value="Presente + Atraso">Presente com Atraso</option>
-            <option value="Presente + Saída Antecipada">Presente com Saída Antecipada</option>
-            <option value="Falta">Falta</option>
-          </select>
-        </div>
+    <!-- CONTEÚDO DAS TABELAS -->
+    <div id="conteudoTurnos">
+      <div class="text-center py-5">
+        <div class="spinner-border text-info" role="status"></div>
+        <p class="mt-2 text-white">A carregar dados...</p>
+      </div>
+    </div>
 
-        <!-- CAMPO DINÂMICO DE HORÁRIOS / OBSERVAÇÃO -->
-        <div class="mb-4" id="blocoObs" style="display: none;">
-          <label class="form-label" id="labelObs">Detalhes do Horário / Justificativa:</label>
-          <input type="text" id="obs" class="form-control" placeholder="Ex: 08:00 às 10:00 ou motivo da falta">
-          <small class="text-warning" id="avisoObs" style="font-size: 0.75rem;"></small>
-        </div>
-
-        <!-- BOTÃO DE ENVIO -->
-        <button type="submit" id="btnSalvar" class="btn btn-info w-100 fw-bold py-2">Salvar Apontamento</button>
-      </form>
+    <!-- BOTÃO SALVAR -->
+    <div class="card card-custom mt-3 mb-4 text-center" id="botaoSalvarDiv" style="display: none;">
+      <button type="button" class="btn btn-primary btn-lg w-100 py-3 fw-bold" onclick="salvarApontamentos()">
+        ✔ REGISTRAR APONTAMENTOS
+      </button>
     </div>
   </div>
 
+  <!-- MODAL GERENCIAR -->
+  <div class="modal fade" id="modalGerenciar" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content card-custom text-white" style="background-color: #1c2541;">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title text-info">Gestão de Funcionários</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <h6 class="text-warning">Adicionar Novo Funcionário</h6>
+          <div class="mb-3">
+            <label class="form-label">Nome Completo:</label>
+            <input type="text" id="novoNome" class="form-control" placeholder="Ex: JOÃO SILVA" style="text-align: left;">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Horário / Turno:</label>
+            <input type="text" id="novoTurno" class="form-control" placeholder="Ex: 06h às 14h" style="text-align: left;">
+          </div>
+          <button type="button" class="btn btn-success w-100 mb-4" onclick="adicionarFuncionarioApp()">Cadastrar Funcionário</button>
+          
+          <hr class="border-secondary">
+          
+          <h6 class="text-danger mt-3">Remover Funcionário</h6>
+          <div class="mb-3">
+            <label class="form-label">Digite ou Selecione:</label>
+            <input type="text" id="selectRemover" class="form-control" list="listaRemover" placeholder="Nome..." style="text-align: left;">
+            <datalist id="listaRemover"><option value="A carregar..."></datalist>
+          </div>
+          <button type="button" class="btn btn-danger w-100" onclick="removerFuncionarioApp()">Remover Funcionário</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbyt0-k9jkWcIHe4nQcgjyWe_PADniW1q1SLLB3gdPbHKcXIjllPyZVpRl7C-mQ1cp32_w/exec";
+    let totalFuncionarios = 0;
 
     window.onload = function() {
-      document.getElementById('data').valueAsDate = new Date();
-      carregarListaFuncionarios();
+      document.getElementById('dataApontamento').valueAsDate = new Date();
+      carregarDados();
     };
 
-    function carregarListaFuncionarios() {
-      fetch(`${API_URL}?action=getRelatorio`)
+    function carregarDados() {
+      fetch(`${API_URL}?action=getFuncionarios`)
         .then(res => res.json())
         .then(dados => {
-          const datalist = document.getElementById('listaFuncionarios');
-          datalist.innerHTML = '';
-          if (Array.isArray(dados) && dados.length > 0) {
-            const funcionarios = [...new Set(dados.map(item => item.nome).filter(Boolean))].sort();
-            funcionarios.forEach(nome => {
-              let opt = document.createElement('option');
-              opt.value = nome;
-              datalist.appendChild(opt);
-            });
-          }
+          popularSelectTurnos(dados);
+          renderizarTabelasPorTurno(dados);
+          popularSelectRemover(dados);
         })
-        .catch(err => console.log("Aviso: Nenhum registo anterior encontrado para sugestão automática."));
+        .catch(err => alert("Erro ao carregar dados: " + err.message));
     }
 
-    function verificarOcorrencia() {
-      const oc = document.getElementById('ocorrencia').value;
-      const blocoObs = document.getElementById('blocoObs');
-      const labelObs = document.getElementById('labelObs');
-      const avisoObs = document.getElementById('avisoObs');
-      const campoObs = document.getElementById('obs');
+    function popularSelectTurnos(dados) {
+      const select = document.getElementById('filtroTurnoSelect');
+      const turnos = [...new Set(dados.map(item => item.turno || 'Geral'))].sort();
+      
+      select.innerHTML = '<option value="todos">Visualizar Todos os Turnos</option>';
+      turnos.forEach(turno => {
+        let opt = document.createElement('option');
+        opt.value = turno;
+        opt.innerText = `Turno: ${turno}`;
+        select.appendChild(opt);
+      });
+    }
 
-      if (oc === "Presente") {
-        blocoObs.style.display = 'none';
-        campoObs.value = '';
-      } else {
-        blocoObs.style.display = 'block';
-        if (oc.includes("Atraso") || oc.includes("Saída")) {
-          labelObs.innerText = "Intervalo do Horário Perdido:";
-          avisoObs.innerText = "Formato recomendado: 08:00 às 10:00";
+    function filtrarTurnoVisualizacao() {
+      const turnoSelecionado = document.getElementById('filtroTurnoSelect').value;
+      const blocos = document.querySelectorAll('.bloco-turno');
+
+      blocos.forEach(bloco => {
+        if (turnoSelecionado === 'todos' || bloco.getAttribute('data-turno') === turnoSelecionado) {
+          bloco.style.display = 'block';
         } else {
-          labelObs.innerText = "Justificativa da Falta:";
-          avisoObs.innerText = "Ex: Consulta médica, atestado, etc.";
+          bloco.style.display = 'none';
         }
+      });
+    }
+
+    function renderizarTabelasPorTurno(dados) {
+      const container = document.getElementById('conteudoTurnos');
+      container.innerHTML = '';
+
+      if (!dados || dados.length === 0) {
+        container.innerHTML = '<div class="alert alert-warning text-center">Nenhum funcionário cadastrado.</div>';
+        return;
+      }
+
+      const porTurno = {};
+      dados.forEach(item => {
+        const turno = item.turno || 'Geral';
+        if (!porTurno[turno]) porTurno[turno] = [];
+        porTurno[turno].push(item);
+      });
+
+      let globalIndex = 0;
+
+      for (const [turno, lista] of Object.entries(porTurno)) {
+        let blocoDiv = document.createElement('div');
+        blocoDiv.className = 'bloco-turno';
+        blocoDiv.setAttribute('data-turno', turno);
+
+        let htmlTurno = `
+          <div class="turno-header">
+            <span>⏱ ${turno}</span>
+            <button type="button" class="btn btn-sm btn-outline-light py-0 px-2" onclick="marcarTurnoTodos(${globalIndex}, ${lista.length})">Marcar Todos Presentes</button>
+          </div>
+          <div class="card card-custom p-0 overflow-hidden mb-3">
+            <div class="table-responsive">
+              <table class="table table-dark-custom table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th class="text-start ps-2" style="width: 35%;">Funcionário</th>
+                    <th class="text-start" style="width: 30%;">Status</th>
+                    <th class="text-start" style="width: 35%;">Início às Fim</th>
+                  </tr>
+                </thead>
+                <tbody>
+        `;
+
+        lista.forEach(func => {
+          htmlTurno += `
+            <tr>
+              <td class="ps-2">
+                <span class="fw-bold" style="font-size: 0.85rem;">${func.nome}</span>
+                <input type="hidden" id="nome_${globalIndex}" value="${func.nome}">
+                <input type="hidden" id="turno_${globalIndex}" value="${turno}">
+              </td>
+              <td>
+                <select class="form-select form-select-sm" id="status_${globalIndex}" onchange="mudarStatus(${globalIndex})">
+                  <option value="pendente">Selecione...</option>
+                  <option value="presente">Presente</option>
+                  <option value="falta">Falta</option>
+                  <option value="atraso">Atraso</option>
+                  <option value="saida">Saída Antecipada</option>
+                </select>
+              </td>
+              <td>
+                <div id="container_obs_${globalIndex}" class="time-container" style="display: none !important;">
+                  <input type="time" class="form-control" id="hInicio_${globalIndex}">
+                  <span class="text-muted small">às</span>
+                  <input type="time" class="form-control" id="hFim_${globalIndex}">
+                </div>
+              </td>
+            </tr>
+          `;
+          globalIndex++;
+        });
+
+        htmlTurno += `</tbody></table></div></div>`;
+        blocoDiv.innerHTML = htmlTurno;
+        container.appendChild(blocoDiv);
+      }
+
+      totalFuncionarios = globalIndex;
+      document.getElementById('botaoSalvarDiv').style.display = 'block';
+    }
+
+    function popularSelectRemover(dados) {
+      const datalist = document.getElementById('listaRemover');
+      const funcionarios = [...new Set(dados.map(item => item.nome))].sort();
+      datalist.innerHTML = '';
+      funcionarios.forEach(nome => {
+        let opt = document.createElement('option');
+        opt.value = nome;
+        datalist.appendChild(opt);
+      });
+    }
+
+    function mudarStatus(idx) {
+      const status = document.getElementById(`status_${idx}`).value;
+      const containerObs = document.getElementById(`container_obs_${idx}`);
+
+      if (status === 'atraso' || status === 'saida') {
+        containerObs.style.display = 'flex';
+      } else {
+        containerObs.style.display = 'none';
       }
     }
 
-    function enviarApontamento(e) {
-      e.preventDefault();
-      
-      const btn = document.getElementById('btnSalvar');
-      btn.disabled = true;
-      btn.innerText = "A guardar...";
+    function marcarTurnoTodos(inicio, qtd) {
+      for (let i = inicio; i < inicio + qtd; i++) {
+        document.getElementById(`status_${i}`).value = 'presente';
+        document.getElementById(`container_obs_${i}`).style.display = 'none';
+      }
+    }
 
-      const dataRaw = document.getElementById('data').value;
-      const partes = dataRaw.split('-');
-      const dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
-
-      const dados = {
-        data: dataFormatada,
-        nome: document.getElementById('nome').value.trim(),
-        turno: document.getElementById('turno').value,
-        ocorrencia: document.getElementById('ocorrencia').value,
-        obs: document.getElementById('obs').value.trim()
-      };
+    function adicionarFuncionarioApp() {
+      const nome = document.getElementById('novoNome').value;
+      const turno = document.getElementById('novoTurno').value || "06h às 14h";
+      if (!nome) { alert("Insira o nome."); return; }
 
       fetch(API_URL, {
         method: 'POST',
-        body: JSON.stringify(dados),
-        headers: { "Content-Type": "text/plain;charset=utf-8" }
+        body: JSON.stringify({ action: "adicionarFuncionario", nome, turno })
       })
-      .then(res => res.text())
-      .then(resposta => {
-        alert("Apontamento guardado com sucesso!");
-        document.getElementById('formApontamento').reset();
-        document.getElementById('data').valueAsDate = new Date();
-        document.getElementById('blocoObs').style.display = 'none';
-        btn.disabled = false;
-        btn.innerText = "Salvar Apontamento";
-        carregarListaFuncionarios();
-      })
-      .catch(err => {
-        alert("Erro ao guardar apontamento: " + err.message);
-        btn.disabled = false;
-        btn.innerText = "Salvar Apontamento";
+      .then(res => res.json())
+      .then(resp => {
+        alert(resp.mensagem);
+        location.reload();
       });
+    }
+
+    function removerFuncionarioApp() {
+      const nome = document.getElementById('selectRemover').value.trim();
+      if (!nome) { alert("Selecione ou digite um funcionário."); return; }
+      if (!confirm(`Remover ${nome}?`)) return;
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "removerFuncionario", nome })
+      })
+      .then(res => res.json())
+      .then(resp => {
+        alert(resp.mensagem);
+        location.reload();
+      });
+    }
+
+    function salvarApontamentos() {
+      const dataInput = document.getElementById('dataApontamento').value;
+      if (!dataInput) { alert("Selecione a data."); return; }
+
+      const partes = dataInput.split('-');
+      const dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
+
+      let apontamentos = [];
+      for (let i = 0; i < totalFuncionarios; i++) {
+        const nome = document.getElementById(`nome_${i}`).value;
+        const turno = document.getElementById(`turno_${i}`).value;
+        const status = document.getElementById(`status_${i}`).value;
+        
+        const hInicio = document.getElementById(`hInicio_${i}`).value;
+        const hFim = document.getElementById(`hFim_${i}`).value;
+
+        if (status === 'pendente') continue;
+
+        let ocorrencia = "";
+        let obsTexto = "";
+
+        if (status === 'presente') {
+          ocorrencia = "Presente";
+        } else if (status === 'falta') {
+          ocorrencia = "Falta";
+        } else if (status === 'atraso') {
+          ocorrencia = "Presente + Atraso";
+          if (hInicio && hFim) obsTexto = `Atraso: ${hInicio} às ${hFim}`;
+        } else if (status === 'saida') {
+          ocorrencia = "Presente + Saída Antecipada";
+          if (hInicio && hFim) obsTexto = `Saída Antecipada: ${hInicio} às ${hFim}`;
+        }
+
+        apontamentos.push({ data: dataFormatada, nome, turno, ocorrencia, obs: obsTexto });
+      }
+
+      if (apontamentos.length === 0) {
+        alert("Nenhum apontamento marcado!");
+        return;
+      }
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "salvarLote", apontamentos })
+      })
+      .then(res => res.json())
+      .then(resp => {
+        alert(resp.mensagem);
+        location.reload();
+      })
+      .catch(err => alert("Erro ao salvar: " + err.message));
     }
   </script>
 </body>
