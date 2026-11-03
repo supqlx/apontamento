@@ -96,11 +96,11 @@
       </div>
     </div>
 
-    <!-- CARDS DE MÉTRICAS (5 COLUNAS) -->
+    <!-- CARDS DE MÉTRICAS -->
     <div class="row g-3 mb-4">
       <div class="col-md">
         <div class="stat-card">
-          <h6 class="small">Presenças</h6>
+          <h6 class="small">Dias Trabalhados</h6>
           <h2 id="cardPresencas" class="fs-3 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
@@ -144,25 +144,27 @@
               <th>Detalhes / Horários</th>
             </tr>
           </thead>
-          <tbody id="corpoTabelaDetalhada">
-            <!-- Preenchido via script -->
-          </tbody>
+          <tbody id="corpoTabelaDetalhada"></tbody>
         </table>
       </div>
     </div>
 
-    <!-- GRÁFICOS -->
+    <!-- GRÁFICOS HORIZONTAIS -->
     <div class="row g-4">
       <div class="col-md-6">
         <div class="card card-custom">
-          <h5 class="text-info mb-3">🏆 Top Maiores Assíduos (Presenças)</h5>
-          <canvas id="graficoAssiduos" height="140"></canvas>
+          <h5 class="text-info mb-3">🏆 Assiduidade (Presenças)</h5>
+          <div style="position: relative; height: 350px;">
+            <canvas id="graficoAssiduos"></canvas>
+          </div>
         </div>
       </div>
       <div class="col-md-6">
         <div class="card card-custom">
-          <h5 class="text-danger mb-3">⚠️ Top Maiores Faltosos / Ocorrências</h5>
-          <canvas id="graficoFaltosos" height="140"></canvas>
+          <h5 class="text-danger mb-3">⚠️ Faltas e Ocorrências</h5>
+          <div style="position: relative; height: 350px;">
+            <canvas id="graficoFaltosos"></canvas>
+          </div>
         </div>
       </div>
     </div>
@@ -206,7 +208,6 @@
 
     function formatarDataExibicao(dataStr) {
       if (!dataStr) return '';
-      // Se vier no formato ISO do Sheets (ex: 2026-10-28T03:00:00.000Z)
       if (dataStr.includes('T')) {
         let partesData = dataStr.split('T')[0].split('-');
         if (partesData.length === 3) {
@@ -258,21 +259,14 @@
 
         if (oc.includes("presente")) {
           presencas++;
-          
           let matchHoras = obs.match(/(\d{2}:\d{2})\s*às\s*(\d{2}:\d{2})/);
           if (matchHoras) {
-            let minutosInicio = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
-            let minutosFim = parseInt(matchHoras[2].split(':')[0]) * 60 + parseInt(matchHoras[2].split(':')[1]);
-            let diferencaMinutos = minutosFim - minutosInicio;
-            if (diferencaMinutos > 0) {
-              totalMinutosDescontados += diferencaMinutos;
-            }
-          } 
-          else {
+            let mIni = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
+            let mFim = parseInt(matchHoras[2].split(':')[0]) * 60 + parseInt(matchHoras[2].split(':')[1]);
+            if (mFim > mIni) totalMinutosDescontados += (mFim - mIni);
+          } else {
             let matchH = obs.match(/(\d+)\s*h/);
-            if (matchH) {
-              totalMinutosDescontados += (parseInt(matchH[1]) || 0) * 60;
-            }
+            if (matchH) totalMinutosDescontados += (parseInt(matchH[1]) || 0) * 60;
           }
         }
         if (oc.includes("falta")) {
@@ -282,17 +276,13 @@
 
       let totalMinutosAbsenteismo = (faltas * 420) + totalMinutosDescontados;
       let horasAbsenteismo = (totalMinutosAbsenteismo / 60).toFixed(1);
-      if (horasAbsenteismo.endsWith('.0')) {
-        horasAbsenteismo = parseInt(horasAbsenteismo);
-      }
+      if (horasAbsenteismo.endsWith('.0')) horasAbsenteismo = parseInt(horasAbsenteismo);
 
       let minutosTotaisTrabalho = (presencas * 420) - totalMinutosDescontados;
       if (minutosTotaisTrabalho < 0) minutosTotaisTrabalho = 0;
 
       let horasLiquidas = (minutosTotaisTrabalho / 60).toFixed(1);
-      if (horasLiquidas.endsWith('.0')) {
-        horasLiquidas = parseInt(horasLiquidas);
-      }
+      if (horasLiquidas.endsWith('.0')) horasLiquidas = parseInt(horasLiquidas);
 
       document.getElementById('cardPresencas').innerText = presencas;
       document.getElementById('cardFaltas').innerText = faltas;
@@ -369,13 +359,14 @@
         }
       });
 
+      // Ordenar e listar todos os funcionários
       const listaAssiduos = Object.entries(estatisticasPorNome)
         .map(([nome, obj]) => [nome, obj.presencas])
-        .sort((a,b) => b[1] - a[1]).slice(0, 5);
+        .sort((a,b) => b[1] - a[1]);
 
       const listaFaltosos = Object.entries(estatisticasPorNome)
         .map(([nome, obj]) => [nome, obj.faltas + (obj.ocorrencias > 0 ? 1 : 0), obj])
-        .sort((a,b) => b[1] - a[1]).slice(0, 5);
+        .sort((a,b) => b[1] - a[1]);
 
       if (chartAssiduos) chartAssiduos.destroy();
       if (chartFaltosos) chartFaltosos.destroy();
@@ -388,7 +379,9 @@
           datasets: [{ label: 'Presenças', data: listaAssiduos.map(i => i[1]), backgroundColor: '#4cc9f0' }]
         },
         options: { 
-          responsive: true, 
+          indexAxis: 'y', // GRÁFICO HORIZONTAL
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: { 
             legend: { display: false },
             tooltip: {
@@ -405,7 +398,10 @@
               }
             }
           }, 
-          scales: { y: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, x: { ticks: { color: '#fff' }, grid: { display: false } } } 
+          scales: { 
+            x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, 
+            y: { ticks: { color: '#fff', font: { size: 11 } }, grid: { display: false } } 
+          } 
         }
       });
 
@@ -417,7 +413,9 @@
           datasets: [{ label: 'Ocorrências', data: listaFaltosos.map(i => i[1]), backgroundColor: '#f72585' }]
         },
         options: { 
-          responsive: true, 
+          indexAxis: 'y', // GRÁFICO HORIZONTAL
+          responsive: true,
+          maintainAspectRatio: false,
           plugins: { 
             legend: { display: false },
             tooltip: {
@@ -434,7 +432,10 @@
               }
             }
           }, 
-          scales: { y: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, x: { ticks: { color: '#fff' }, grid: { display: false } } } 
+          scales: { 
+            x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, 
+            y: { ticks: { color: '#fff', font: { size: 11 } }, grid: { display: false } } 
+          } 
         }
       });
     }
