@@ -38,6 +38,12 @@
       border-color: #4cc9f0; 
       box-shadow: none; 
     }
+    /* Estilo para garantir que as opções do select fiquem visíveis e legíveis em qualquer dispositivo */
+    .form-select option {
+      background-color: #1c2541;
+      color: #ffffff;
+      padding: 10px;
+    }
     label, .form-label { color: #4cc9f0 !important; font-weight: 600; }
   </style>
 </head>
@@ -72,7 +78,7 @@
         <div class="mb-3">
           <label class="form-label">Turno:</label>
           <select id="turno" class="form-select" required>
-            <option value="">Selecione o turno...</option>
+            <option value="" disabled selected>Selecione o turno...</option>
             <option value="06h às 14h">06h às 14h</option>
             <option value="14h às 22h">14h às 22h</option>
             <option value="22h às 06h">22h às 06h</option>
