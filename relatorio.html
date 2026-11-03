@@ -131,7 +131,7 @@
       </div>
     </div>
 
-    <!-- TABELA DE RELATÓRIO DETALHADO POR FUNCIONÁRIO -->
+    <!-- TABELA DE RELATÓRIO DETALHADO POR FUNCIONÁRIO COM BADGES -->
     <div class="card card-custom mb-4" id="cardTabelaDetalhada" style="display: none;">
       <h5 class="text-info mb-3">📋 Relatório Detalhado: <span id="nomeFuncionarioSelecionado" class="text-white"></span></h5>
       <div class="table-responsive">
@@ -140,8 +140,8 @@
             <tr>
               <th>Data</th>
               <th>Turno</th>
-              <th>Ocorrência</th>
-              <th>Detalhes / Horários</th>
+              <th>Ocorrência / Status</th>
+              <th>Detalhes / Justificativa</th>
             </tr>
           </thead>
           <tbody id="corpoTabelaDetalhada"></tbody>
@@ -162,7 +162,7 @@
     </div>
 
     <!-- GRÁFICOS HORIZONTAIS -->
-    <div class="row g-4">
+    <div class="row g-4 mb-4">
       <div class="col-md-6">
         <div class="card card-custom">
           <h5 class="text-info mb-3">🏆 Assiduidade (Presenças)</h5>
@@ -180,6 +180,14 @@
         </div>
       </div>
     </div>
+
+    <!-- NOVO GRÁFICO DE TENDÊNCIA TEMPORAL (LINHA) -->
+    <div class="card card-custom">
+      <h5 class="text-warning mb-3">📈 Tendência Temporal: Horas Perdidas (Absenteísmo) ao Longo do Mês</h5>
+      <div style="position: relative; height: 300px;">
+        <canvas id="graficoTendencia"></canvas>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -188,6 +196,7 @@
     let dadosInativosGlobal = [];
     let chartAssiduos = null;
     let chartFaltosos = null;
+    let chartTendencia = null;
 
     window.onload = function() {
       carregarDadosRelatorio();
@@ -337,12 +346,23 @@
           corpoTabela.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Nenhum registo encontrado para este funcionário nos filtros atuais.</td></tr>`;
         } else {
           filtrados.forEach(reg => {
+            // Badges visuais profissionais baseados no status da ocorrência
+            let badgeClass = "bg-secondary";
+            let ocLower = (reg.ocorrencia || "").toLowerCase();
+            if (ocLower.includes("presente") && !ocLower.includes("atraso") && !ocLower.includes("saída")) {
+              badgeClass = "bg-success";
+            } else if (ocLower.includes("atraso") || ocLower.includes("saída")) {
+              badgeClass = "bg-warning text-dark";
+            } else if (ocLower.includes("falta")) {
+              badgeClass = "bg-danger";
+            }
+
             corpoTabela.innerHTML += `
               <tr>
                 <td class="text-center">${formatarDataExibicao(reg.data)}</td>
                 <td class="text-center">${reg.turno || '-'}</td>
-                <td class="text-center fw-bold">${reg.ocorrencia}</td>
-                <td>${reg.obs || 'Nenhuma observação'}</td>
+                <td class="text-center"><span class="badge ${badgeClass} px-2 py-1">${reg.ocorrencia}</span></td>
+                <td>${reg.obs ? `<span class="text-warning">📝 ${reg.obs}</span>` : '<span class="text-muted">Sem observações / Justificativas</span>'}</td>
               </tr>
             `;
           });
@@ -351,24 +371,24 @@
         cardTabela.style.display = 'none';
       }
 
-      // Passa também o filtro do funcionário para os gráficos
-      renderizarGraficos(dadosBrutosGlobal, turnoGraficoFiltro, funcFiltro);
+      renderizarGraficos(dadosBrutosGlobal, turnoGraficoFiltro, funcFiltro, mesFiltro);
     }
 
-    function renderizarGraficos(dados, turnoFiltro, funcFiltro) {
+    function renderizarGraficos(dados, turnoFiltro, funcFiltro, mesFiltro) {
       const estatisticasPorNome = {};
+      const absenteismoPorData = {};
 
       dados.forEach(item => {
         const turnoItem = item.turno || 'Geral';
-        if (turnoFiltro !== 'todos' && turnoItem !== turnoFiltro) {
-          return; 
-        }
+        if (turnoFiltro !== 'todos' && turnoItem !== turnoFiltro) return; 
 
         const nome = item.nome;
-        
-        // Se houver um filtro de funcionário ativo, ignora os outros nomes nos gráficos
-        if (funcFiltro && !nome.toUpperCase().includes(funcFiltro)) {
-          return;
+        if (funcFiltro && !nome.toUpperCase().includes(funcFiltro)) return;
+
+        let dataLimpa = formatarDataExibicao(item.data);
+        if (mesFiltro !== "todos" && dataLimpa) {
+          const mesItem = dataLimpa.split('/')[1];
+          if (mesItem !== mesFiltro) return;
         }
 
         if (!estatisticasPorNome[nome]) {
@@ -377,6 +397,7 @@
 
         const oc = (item.ocorrencia || "").toLowerCase();
         const obs = (item.obs || "").toLowerCase();
+        let minutosItemPerdidos = 0;
 
         if (oc.includes("presente")) {
           estatisticasPorNome[nome].presencas++;
@@ -384,97 +405,113 @@
           if (matchHoras) {
             let mIni = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
             let mFim = parseInt(matchHoras[2].split(':')[0]) * 60 + parseInt(matchHoras[2].split(':')[1]);
-            if (mFim > mIni) estatisticasPorNome[nome].minutosPerdidos += (mFim - mIni);
+            if (mFim > mIni) minutosItemPerdidos = (mFim - mIni);
           } else {
             let matchH = obs.match(/(\d+)\s*h/);
-            if (matchH) estatisticasPorNome[nome].minutosPerdidos += (parseInt(matchH[1]) || 0) * 60;
+            if (matchH) minutosItemPerdidos = (parseInt(matchH[1]) || 0) * 60;
           }
+          estatisticasPorNome[nome].minutosPerdidos += minutosItemPerdidos;
         }
         if (oc.includes("falta")) {
           estatisticasPorNome[nome].faltas++;
+          minutosItemPerdidos = 420;
           estatisticasPorNome[nome].minutosPerdidos += 420;
           estatisticasPorNome[nome].ocorrencias++;
         } else if (oc.includes("atraso") || oc.includes("saída")) {
           estatisticasPorNome[nome].ocorrencias++;
         }
+
+        // Acumular para o gráfico de tendência temporal por data
+        if (dataLimpa) {
+          absenteismoPorData[dataLimpa] = (absenteismoPorData[dataLimpa] || 0) + (minutosItemPerdidos / 60);
+        }
       });
 
-      const listaAssiduos = Object.entries(estatisticasPorNome)
-        .map(([nome, obj]) => [nome, obj.presencas])
-        .sort((a,b) => b[1] - a[1]);
-
-      const listaFaltosos = Object.entries(estatisticasPorNome)
-        .map(([nome, obj]) => [nome, obj.faltas + (obj.ocorrencias > 0 ? 1 : 0), obj])
-        .sort((a,b) => b[1] - a[1]);
+      const listaAssiduos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.presencas]).sort((a,b) => b[1] - a[1]);
+      const listaFaltosos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.faltas + (obj.ocorrencias > 0 ? 1 : 0), obj]).sort((a,b) => b[1] - a[1]);
+      
+      // Ordenar datas cronologicamente para a linha de tendência
+      const datasOrdenadas = Object.keys(absenteismoPorData).sort((a, b) => {
+        let partesA = a.split('/');
+        let partesB = b.split('/');
+        return new Date(partesA[2], partesA[1]-1, partesA[0]) - new Date(partesB[2], partesB[1]-1, partesB[0]);
+      });
+      const valoresTendencia = datasOrdenadas.map(d => Number(absenteismoPorData[d].toFixed(1)));
 
       if (chartAssiduos) chartAssiduos.destroy();
       if (chartFaltosos) chartFaltosos.destroy();
+      if (chartTendencia) chartTendencia.destroy();
 
-      const ctx1 = document.getElementById('graficoAssiduos').getContext('2d');
-      chartAssiduos = new Chart(ctx1, {
+      // 1. Gráfico de Assíduos
+      chartAssiduos = new Chart(document.getElementById('graficoAssiduos').getContext('2d'), {
         type: 'bar',
         data: {
           labels: listaAssiduos.map(i => i[0]),
           datasets: [{ label: 'Presenças', data: listaAssiduos.map(i => i[1]), backgroundColor: '#4cc9f0' }]
         },
         options: { 
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
           plugins: { 
             legend: { display: false },
             tooltip: {
               callbacks: {
                 label: function(context) {
-                  const nome = context.label;
-                  const dadosFunc = estatisticasPorNome[nome];
-                  return [
-                    ` Dias Trabalhados: ${dadosFunc.presencas}`,
-                    ` Total de Faltas: ${dadosFunc.faltas}`,
-                    ` Horas de Absenteísmo: ${(dadosFunc.minutosPerdidos / 60).toFixed(1)} hrs`
-                  ];
+                  const dFunc = estatisticasPorNome[context.label];
+                  return [` Dias Trabalhados: ${dFunc.presencas}`, ` Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`];
                 }
               }
             }
           }, 
-          scales: { 
-            x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, 
-            y: { ticks: { color: '#fff', font: { size: 11 } }, grid: { display: false } } 
-          } 
+          scales: { x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, y: { ticks: { color: '#fff', font: { size: 11 } }, grid: { display: false } } } 
         }
       });
 
-      const ctx2 = document.getElementById('graficoFaltosos').getContext('2d');
-      chartFaltosos = new Chart(ctx2, {
+      // 2. Gráfico de Faltosos / Ocorrências
+      chartFaltosos = new Chart(document.getElementById('graficoFaltosos').getContext('2d'), {
         type: 'bar',
         data: {
           labels: listaFaltosos.map(i => i[0]),
           datasets: [{ label: 'Ocorrências', data: listaFaltosos.map(i => i[1]), backgroundColor: '#f72585' }]
         },
         options: { 
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
           plugins: { 
             legend: { display: false },
             tooltip: {
               callbacks: {
                 label: function(context) {
-                  const nome = context.label;
-                  const dadosFunc = estatisticasPorNome[nome];
-                  return [
-                    ` Total de Faltas: ${dadosFunc.faltas}`,
-                    ` Horas de Absenteísmo: ${(dadosFunc.minutosPerdidos / 60).toFixed(1)} hrs`,
-                    ` Dias Trabalhados: ${dadosFunc.presencas}`
-                  ];
+                  const dFunc = estatisticasPorNome[context.label];
+                  return [` Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` Dias Trabalhados: ${dFunc.presencas}`];
                 }
               }
             }
           }, 
-          scales: { 
-            x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, 
-            y: { ticks: { color: '#fff', font: { size: 11 } }, grid: { display: false } } 
-          } 
+          scales: { x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, y: { ticks: { color: '#fff', font: { size: 11 } }, grid: { display: false } } } 
+        }
+      });
+
+      // 3. Gráfico de Linha de Tendência Temporal
+      chartTendencia = new Chart(document.getElementById('graficoTendencia').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: datasOrdenadas,
+          datasets: [{
+            label: 'Horas Perdidas',
+            data: valoresTendencia,
+            borderColor: '#ff9f1c',
+            backgroundColor: 'rgba(255, 159, 28, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } },
+            y: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }
+          }
         }
       });
     }
