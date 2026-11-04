@@ -162,12 +162,13 @@
       </div>
     </div>
 
-    <!-- GRÁFICOS HORIZONTAIS -->
+    <!-- GRÁFICOS HORIZONTAIS COM ALTURA DINÂMICA -->
     <div class="row g-4 mb-4">
       <div class="col-md-6">
         <div class="card card-custom">
           <h5 class="text-info mb-3">🏆 Assiduidade (Presenças)</h5>
-          <div style="position: relative; height: 350px;">
+          <!-- Altura dinâmica ajustada por JS conforme a quantidade de funcionários -->
+          <div id="containerAssiduos" style="position: relative; height: 400px; overflow-y: auto;">
             <canvas id="graficoAssiduos"></canvas>
           </div>
         </div>
@@ -175,7 +176,7 @@
       <div class="col-md-6">
         <div class="card card-custom">
           <h5 class="text-danger mb-3">⚠️ Faltas e Ocorrências</h5>
-          <div style="position: relative; height: 350px;">
+          <div id="containerFaltosos" style="position: relative; height: 400px; overflow-y: auto;">
             <canvas id="graficoFaltosos"></canvas>
           </div>
         </div>
@@ -337,7 +338,6 @@
       const corpoTabela = document.getElementById('corpoTabelaDetalhada');
       const spanNomeFunc = document.getElementById('nomeFuncionarioSelecionado');
 
-      // Exibe a tabela detalhada sempre que houver filtro de funcionário OU de data específica
       if (funcFiltro.length > 0 || dataFiltroFormatada.length > 0) {
         cardTabela.style.display = 'block';
         spanNomeFunc.innerText = funcFiltro ? document.getElementById('filtroFuncionario').value : `Data: ${dataFiltroFormatada}`;
@@ -432,6 +432,12 @@
       const listaAssiduos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.presencas]).sort((a,b) => b[1] - a[1]);
       const listaFaltosos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.faltas + (obj.ocorrencias > 0 ? 1 : 0), obj]).sort((a,b) => b[1] - a[1]);
       
+      // Ajustar altura do container dinamicamente com base no número de funcionários
+      const qtdFuncionarios = listaAssiduos.length;
+      const alturaDinamica = Math.max(350, qtdFuncionarios * 30); // 30px por funcionário
+      document.getElementById('containerAssiduos').style.height = alturaDinamica + 'px';
+      document.getElementById('containerFaltosos').style.height = alturaDinamica + 'px';
+
       const datasOrdenadas = Object.keys(absenteismoPorData).sort((a, b) => {
         let partesA = a.split('/');
         let partesB = b.split('/');
