@@ -131,7 +131,7 @@
       </div>
     </div>
 
-    <!-- TABELA DE RELATÓRIO DETALHADO POR FUNCIONÁRIO -->
+    <!-- TABELA DE RELATÓRIO DETALHADO -->
     <div class="card card-custom mb-4" id="cardTabelaDetalhada" style="display: none;">
       <h5 class="text-info mb-3">📋 Relatório Detalhado: <span id="nomeFuncionarioSelecionado" class="text-white"></span></h5>
       <div class="table-responsive">
@@ -139,6 +139,7 @@
           <thead>
             <tr>
               <th>Data</th>
+              <th>Funcionário</th>
               <th>Turno</th>
               <th>Ocorrência / Status</th>
               <th>Detalhes / Justificativa</th>
@@ -263,12 +264,12 @@
     function atualizarRelatorio() {
       const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
       const mesFiltro = document.getElementById('filtroMes').value;
-      const dataFiltroInput = document.getElementById('filtroData').value; // Formato yyyy-mm-dd
+      const dataFiltroInput = document.getElementById('filtroData').value;
 
       let dataFiltroFormatada = "";
       if (dataFiltroInput) {
         const p = dataFiltroInput.split('-');
-        dataFiltroFormatada = `${p[2]}/${p[1]}/${p[0]}`; // Converte para dd/mm/yyyy
+        dataFiltroFormatada = `${p[2]}/${p[1]}/${p[0]}`;
       }
 
       let filtrados = dadosBrutosGlobal.filter(item => {
@@ -336,14 +337,14 @@
       const corpoTabela = document.getElementById('corpoTabelaDetalhada');
       const spanNomeFunc = document.getElementById('nomeFuncionarioSelecionado');
 
-      // Se houver filtro de funcionário OU de data específica, exibe a tabela detalhada
+      // Exibe a tabela detalhada sempre que houver filtro de funcionário OU de data específica
       if (funcFiltro.length > 0 || dataFiltroFormatada.length > 0) {
         cardTabela.style.display = 'block';
         spanNomeFunc.innerText = funcFiltro ? document.getElementById('filtroFuncionario').value : `Data: ${dataFiltroFormatada}`;
         corpoTabela.innerHTML = '';
 
         if (filtrados.length === 0) {
-          corpoTabela.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Nenhum registo encontrado para os filtros atuais.</td></tr>`;
+          corpoTabela.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Nenhum registo encontrado para os filtros atuais.</td></tr>`;
         } else {
           filtrados.forEach(reg => {
             let badgeClass = "bg-secondary";
@@ -359,6 +360,7 @@
             corpoTabela.innerHTML += `
               <tr>
                 <td class="text-center">${formatarDataExibicao(reg.data)}</td>
+                <td class="fw-bold text-info">${reg.nome || '-'}</td>
                 <td class="text-center">${reg.turno || '-'}</td>
                 <td class="text-center"><span class="badge ${badgeClass} px-2 py-1">${reg.ocorrencia}</span></td>
                 <td>${reg.obs ? `<span class="text-warning">📝 ${reg.obs}</span>` : '<span class="text-muted">Sem observações / Justificativas</span>'}</td>
@@ -385,8 +387,6 @@
         if (funcFiltro && !nome.toUpperCase().includes(funcFiltro)) return;
 
         let dataLimpa = formatarDataExibicao(item.data);
-        
-        // Se houver filtro de data específica nos gráficos, aplica também
         if (dataFiltroFormatada && dataLimpa !== dataFiltroFormatada) return;
 
         if (mesFiltro !== "todos" && dataLimpa) {
@@ -443,7 +443,6 @@
       if (chartFaltosos) chartFaltosos.destroy();
       if (chartTendencia) chartTendencia.destroy();
 
-      // 1. Gráfico de Assíduos
       chartAssiduos = new Chart(document.getElementById('graficoAssiduos').getContext('2d'), {
         type: 'bar',
         data: {
@@ -467,7 +466,6 @@
         }
       });
 
-      // 2. Gráfico de Faltosos / Ocorrências
       chartFaltosos = new Chart(document.getElementById('graficoFaltosos').getContext('2d'), {
         type: 'bar',
         data: {
@@ -491,7 +489,6 @@
         }
       });
 
-      // 3. Gráfico de Linha de Tendência Temporal
       chartTendencia = new Chart(document.getElementById('graficoTendencia').getContext('2d'), {
         type: 'line',
         data: {
