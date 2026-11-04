@@ -100,7 +100,7 @@
     <div class="row g-3 mb-4">
       <div class="col-md">
         <div class="stat-card">
-          <h6 class="small">Presenças</h6>
+          <h6 class="small">Dias Trabalhados</h6>
           <h2 id="cardPresencas" class="fs-3 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
@@ -131,7 +131,7 @@
       </div>
     </div>
 
-    <!-- TABELA DE RELATÓRIO DETALHADO POR FUNCIONÁRIO COM BADGES -->
+    <!-- TABELA DE RELATÓRIO DETALHADO POR FUNCIONÁRIO -->
     <div class="card card-custom mb-4" id="cardTabelaDetalhada" style="display: none;">
       <h5 class="text-info mb-3">📋 Relatório Detalhado: <span id="nomeFuncionarioSelecionado" class="text-white"></span></h5>
       <div class="table-responsive">
@@ -181,7 +181,7 @@
       </div>
     </div>
 
-    <!-- NOVO GRÁFICO DE TENDÊNCIA TEMPORAL (LINHA) -->
+    <!-- GRÁFICO DE TENDÊNCIA TEMPORAL (LINHA) -->
     <div class="card card-custom">
       <h5 class="text-warning mb-3">📈 Tendência Temporal: Horas Perdidas (Absenteísmo) ao Longo do Mês</h5>
       <div style="position: relative; height: 300px;">
@@ -263,13 +263,12 @@
     function atualizarRelatorio() {
       const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
       const mesFiltro = document.getElementById('filtroMes').value;
-      const dataFiltroInput = document.getElementById('filtroData').value;
-      const turnoGraficoFiltro = document.getElementById('filtroTurnoGraficos').value;
+      const dataFiltroInput = document.getElementById('filtroData').value; // Formato yyyy-mm-dd
 
       let dataFiltroFormatada = "";
       if (dataFiltroInput) {
         const p = dataFiltroInput.split('-');
-        dataFiltroFormatada = `${p[2]}/${p[1]}/${p[0]}`;
+        dataFiltroFormatada = `${p[2]}/${p[1]}/${p[0]}`; // Converte para dd/mm/yyyy
       }
 
       let filtrados = dadosBrutosGlobal.filter(item => {
@@ -337,16 +336,16 @@
       const corpoTabela = document.getElementById('corpoTabelaDetalhada');
       const spanNomeFunc = document.getElementById('nomeFuncionarioSelecionado');
 
-      if (funcFiltro.length > 0) {
+      // Se houver filtro de funcionário OU de data específica, exibe a tabela detalhada
+      if (funcFiltro.length > 0 || dataFiltroFormatada.length > 0) {
         cardTabela.style.display = 'block';
-        spanNomeFunc.innerText = document.getElementById('filtroFuncionario').value;
+        spanNomeFunc.innerText = funcFiltro ? document.getElementById('filtroFuncionario').value : `Data: ${dataFiltroFormatada}`;
         corpoTabela.innerHTML = '';
 
         if (filtrados.length === 0) {
-          corpoTabela.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Nenhum registo encontrado para este funcionário nos filtros atuais.</td></tr>`;
+          corpoTabela.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Nenhum registo encontrado para os filtros atuais.</td></tr>`;
         } else {
           filtrados.forEach(reg => {
-            // Badges visuais profissionais baseados no status da ocorrência
             let badgeClass = "bg-secondary";
             let ocLower = (reg.ocorrencia || "").toLowerCase();
             if (ocLower.includes("presente") && !ocLower.includes("atraso") && !ocLower.includes("saída")) {
@@ -371,10 +370,10 @@
         cardTabela.style.display = 'none';
       }
 
-      renderizarGraficos(dadosBrutosGlobal, turnoGraficoFiltro, funcFiltro, mesFiltro);
+      renderizarGraficos(dadosBrutosGlobal, document.getElementById('filtroTurnoGraficos').value, funcFiltro, mesFiltro, dataFiltroFormatada);
     }
 
-    function renderizarGraficos(dados, turnoFiltro, funcFiltro, mesFiltro) {
+    function renderizarGraficos(dados, turnoFiltro, funcFiltro, mesFiltro, dataFiltroFormatada) {
       const estatisticasPorNome = {};
       const absenteismoPorData = {};
 
@@ -386,6 +385,10 @@
         if (funcFiltro && !nome.toUpperCase().includes(funcFiltro)) return;
 
         let dataLimpa = formatarDataExibicao(item.data);
+        
+        // Se houver filtro de data específica nos gráficos, aplica também
+        if (dataFiltroFormatada && dataLimpa !== dataFiltroFormatada) return;
+
         if (mesFiltro !== "todos" && dataLimpa) {
           const mesItem = dataLimpa.split('/')[1];
           if (mesItem !== mesFiltro) return;
@@ -421,7 +424,6 @@
           estatisticasPorNome[nome].ocorrencias++;
         }
 
-        // Acumular para o gráfico de tendência temporal por data
         if (dataLimpa) {
           absenteismoPorData[dataLimpa] = (absenteismoPorData[dataLimpa] || 0) + (minutosItemPerdidos / 60);
         }
@@ -430,7 +432,6 @@
       const listaAssiduos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.presencas]).sort((a,b) => b[1] - a[1]);
       const listaFaltosos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.faltas + (obj.ocorrencias > 0 ? 1 : 0), obj]).sort((a,b) => b[1] - a[1]);
       
-      // Ordenar datas cronologicamente para a linha de tendência
       const datasOrdenadas = Object.keys(absenteismoPorData).sort((a, b) => {
         let partesA = a.split('/');
         let partesB = b.split('/');
