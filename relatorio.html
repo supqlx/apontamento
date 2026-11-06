@@ -318,9 +318,10 @@
         alert("Apontamento adicionado com sucesso!");
         carregarDadosRelatorio();
       })
-      .catch(err => alert("Erro ao salvar: " + err.message));
+      .catch(err => {
+        alert("Erro ao salvar o apontamento: " + err.message);
+      });
     }
-
     function atualizarRelatorio() {
       const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
       const mesFiltro = document.getElementById('filtroMes').value;
