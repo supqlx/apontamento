@@ -43,6 +43,7 @@
     .table-dark-custom { background-color: #233055; color: #fff; margin-bottom: 0; }
     .table-dark-custom th { background-color: #0b132b; color: #4cc9f0; border-color: #2d3e6b; text-align: center; }
     .table-dark-custom td { background-color: #1c2541; color: #fff; border-color: #2d3e6b; vertical-align: middle; }
+    canvas { cursor: pointer; } /* Indica que os nomes nos gráficos são clicáveis */
   </style>
 </head>
 <body>
@@ -56,7 +57,7 @@
           <p class="small m-0 text-white">Consulte presenças, faltas, horas líquidas, absenteísmo e funcionários inativos.</p>
         </div>
         <div class="d-flex gap-2">
-          <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="abrirModalCorrecao()">➕ Lançar Falta / Retroativo</button>
+          <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="abrirModalCorrecao()">➕ Lançamento Manual / Retroativo</button>
           <a href="index.html" class="btn btn-outline-light btn-sm">⬅ Voltar para Apontamentos</a>
         </div>
       </div>
@@ -160,6 +161,9 @@
           <select id="filtroTurnoGraficos" class="form-select form-select-sm" onchange="atualizarRelatorio()">
             <option value="todos">Visualizar Todos os Turnos</option>
           </select>
+        </div>
+        <div class="col-md-8 text-end text-muted small">
+          💡 <i>Dica: Clique diretamente no nome de qualquer funcionário nos gráficos abaixo para adicionar rapidamente um registo para ele.</i>
         </div>
       </div>
     </div>
@@ -275,20 +279,26 @@
       }
     }
 
-    function abrirModalCorrecao() {
-      let nomeFunc = prompt("Digite o nome completo do funcionário para o lançamento retroativo:");
+    function abrirModalCorrecao(nomePredefinido = "") {
+      let nomeFunc = prompt("Nome completo do funcionário:", nomePredefinido);
       if (!nomeFunc) return;
 
-      let dataInput = prompt("Digite a data (Formato: DD/MM/AAAA):", "04/11/2026");
+      let hoje = new Date();
+      let dia = String(hoje.getDate()).padStart(2, '0');
+      let mes = String(hoje.getMonth() + 1).padStart(2, '0');
+      let ano = hoje.getFullYear();
+      let dataSugerida = `${dia}/${mes}/${ano}`;
+
+      let dataInput = prompt("Digite a data (Formato: DD/MM/AAAA):", dataSugerida);
       if (!dataInput) return;
 
-      let turno = prompt("Digite o turno (ex: 06h às 14h, 14h às 22h, 22h às 06h):", "06h às 14h");
+      let turno = prompt("Digite o turno (06h às 14h, 14h às 22h, 22h às 06h):", "06h às 14h");
       if (!turno) return;
 
-      let ocorrencia = prompt("Digite o status (Ex: Falta, Presente, Presente + Atraso):", "Falta");
+      let ocorrencia = prompt("Status (Ex: Falta, Presente, Presente + Atraso, Presente + Saída Antecipada):", "Falta");
       if (!ocorrencia) return;
 
-      let obs = prompt("Observação ou justificativa (opcional):", "Lançamento retroativo");
+      let obs = prompt("Observação / Justificativa / Horário (opcional):", "");
 
       const dados = {
         data: dataInput,
@@ -305,7 +315,7 @@
       })
       .then(res => res.text())
       .then(() => {
-        alert("Apontamento retroativo adicionado com sucesso!");
+        alert("Apontamento adicionado com sucesso!");
         carregarDadosRelatorio();
       })
       .catch(err => alert("Erro ao salvar: " + err.message));
@@ -518,6 +528,15 @@
       if (chartFaltosos) chartFaltosos.destroy();
       if (chartTendencia) chartTendencia.destroy();
 
+      // Função de clique no gráfico para abrir o lançamento direto para o funcionário selecionado
+      function aoClicarNoGrafico(event, elements, chart) {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const nomeFuncionario = chart.data.labels[index];
+          abrirModalCorrecao(nomeFuncionario);
+        }
+      }
+
       chartAssiduos = new Chart(document.getElementById('graficoAssiduos').getContext('2d'), {
         type: 'bar',
         data: {
@@ -526,13 +545,14 @@
         },
         options: { 
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          onClick: aoClicarNoGrafico,
           plugins: { 
             legend: { display: false },
             tooltip: {
               callbacks: {
                 label: function(context) {
                   const dFunc = estatisticasPorNome[context.label];
-                  return [` Dias Trabalhados: ${dFunc.presencas}`, ` Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`];
+                  return [` Dias Trabalhados: ${dFunc.presencas}`, ` Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` 🖱️ Clique para adicionar registo`];
                 }
               }
             }
@@ -549,13 +569,14 @@
         },
         options: { 
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+          onClick: aoClicarNoGrafico,
           plugins: { 
             legend: { display: false },
             tooltip: {
               callbacks: {
                 label: function(context) {
                   const dFunc = estatisticasPorNome[context.label];
-                  return [` Total de Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` Dias Trabalhados: ${dFunc.presencas}`];
+                  return [` Total de Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` Dias Trabalhados: ${dFunc.presencas}`, ` 🖱️ Clique para adicionar registo`];
                 }
               }
             }
