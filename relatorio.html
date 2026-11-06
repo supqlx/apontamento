@@ -131,7 +131,7 @@
       </div>
     </div>
 
-    <!-- TABELA DE RELATÓRIO DETALHADO -->
+    <!-- TABELA DE RELATÓRIO DETALHADO (Aparece ao filtrar por funcionário ou data) -->
     <div class="card card-custom mb-4" id="cardTabelaDetalhada" style="display: none;">
       <h5 class="text-info mb-3">📋 Relatório Detalhado: <span id="nomeFuncionarioSelecionado" class="text-white"></span></h5>
       <div class="table-responsive">
@@ -286,7 +286,6 @@
         dataFiltroFormatada = `${p[2]}/${p[1]}/${p[0]}`;
       }
 
-      // Anexar o índice original de cada item para permitir exclusão exata
       let dadosComIndice = dadosBrutosGlobal.map((item, index) => ({ ...item, indexOriginal: index }));
 
       let filtrados = dadosComIndice.filter(item => {
@@ -303,8 +302,7 @@
         return matchFunc && matchData && matchMes;
       });
 
-      // Agrupamento inteligente por funcionário e data para evitar contagem duplicada de dias
-      let mapaDiasTrabalhados = {}; // chave: "NOME|DATA", valor: true
+      let mapaDiasTrabalhados = {};
       let faltas = 0;
       let totalMinutosDescontados = 0;
 
@@ -315,6 +313,7 @@
         const oc = (item.ocorrencia || "").toLowerCase();
         const obs = (item.obs || "").toLowerCase();
 
+        // Considera presente se contiver "presente" (mesmo com atraso ou saída antecipada)
         if (oc.includes("presente")) {
           mapaDiasTrabalhados[chaveDia] = true;
           let matchHoras = obs.match(/(\d{2}:\d{2})\s*às\s*(\d{2}:\d{2})/);
@@ -360,6 +359,7 @@
       const corpoTabela = document.getElementById('corpoTabelaDetalhada');
       const spanNomeFunc = document.getElementById('nomeFuncionarioSelecionado');
 
+      // A tabela detalhada agora aparece sempre que houver filtro de funcionário OU de data específica
       if (funcFiltro.length > 0 || dataFiltroFormatada.length > 0) {
         cardTabela.style.display = 'block';
         spanNomeFunc.innerText = funcFiltro ? document.getElementById('filtroFuncionario').value : `Data: ${dataFiltroFormatada}`;
@@ -404,7 +404,6 @@
       const estatisticasPorNome = {};
       const absenteismoPorData = {};
 
-      // Garantir que todos os funcionários existentes na base apareçam nos gráficos (mesmo com 0 faltas)
       const todosFuncionarios = [...new Set(dados.map(item => item.nome).filter(Boolean))];
       todosFuncionarios.forEach(nome => {
         estatisticasPorNome[nome] = { diasUnicos: new Set(), presencas: 0, faltas: 0, ocorrencias: 0, minutosPerdidos: 0 };
@@ -461,7 +460,6 @@
         }
       });
 
-      // Converter Set de dias únicos para o número real de presenças
       Object.keys(estatisticasPorNome).forEach(nome => {
         estatisticasPorNome[nome].presencas = estatisticasPorNome[nome].diasUnicos.size;
       });
