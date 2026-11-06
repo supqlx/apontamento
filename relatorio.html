@@ -100,7 +100,7 @@
     <div class="row g-3 mb-4">
       <div class="col-md">
         <div class="stat-card">
-          <h6 class="small">Presenças</h6>
+          <h6 class="small">Dias Trabalhados</h6>
           <h2 id="cardPresencas" class="fs-3 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
@@ -143,6 +143,7 @@
               <th>Turno</th>
               <th>Ocorrência / Status</th>
               <th>Detalhes / Justificativa</th>
+              <th class="text-center">Ações</th>
             </tr>
           </thead>
           <tbody id="corpoTabelaDetalhada"></tbody>
@@ -167,7 +168,6 @@
       <div class="col-md-6">
         <div class="card card-custom">
           <h5 class="text-info mb-3">🏆 Assiduidade (Presenças)</h5>
-          <!-- Altura dinâmica ajustada por JS conforme a quantidade de funcionários -->
           <div id="containerAssiduos" style="position: relative; height: 400px; overflow-y: auto;">
             <canvas id="graficoAssiduos"></canvas>
           </div>
@@ -262,10 +262,23 @@
       atualizarRelatorio();
     }
 
+    function excluirRegisto(indexOriginal) {
+      if (confirm("Tem certeza que deseja excluir este apontamento incorreto?")) {
+        fetch(`${API_URL}?action=excluir&index=${indexOriginal}`)
+          .then(res => res.text())
+          .then(() => {
+            alert("Registo excluído com sucesso!");
+            carregarDadosRelatorio();
+          })
+          .catch(err => alert("Erro ao excluir: " + err.message));
+      }
+    }
+
     function atualizarRelatorio() {
       const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
       const mesFiltro = document.getElementById('filtroMes').value;
       const dataFiltroInput = document.getElementById('filtroData').value;
+      const turnoGraficoFiltro = document.getElementById('filtroTurnoGraficos').value;
 
       let dataFiltroFormatada = "";
       if (dataFiltroInput) {
@@ -273,7 +286,10 @@
         dataFiltroFormatada = `${p[2]}/${p[1]}/${p[0]}`;
       }
 
-      let filtrados = dadosBrutosGlobal.filter(item => {
+      // Anexar o índice original de cada item para permitir exclusão exata
+      let dadosComIndice = dadosBrutosGlobal.map((item, index) => ({ ...item, indexOriginal: index }));
+
+      let filtrados = dadosComIndice.filter(item => {
         let matchFunc = !funcFiltro || (item.nome && item.nome.toUpperCase().includes(funcFiltro));
         let dataLimpa = formatarDataExibicao(item.data);
         let matchData = !dataFiltroFormatada || dataLimpa === dataFiltroFormatada;
@@ -287,16 +303,20 @@
         return matchFunc && matchData && matchMes;
       });
 
-      let presencas = 0;
+      // Agrupamento inteligente por funcionário e data para evitar contagem duplicada de dias
+      let mapaDiasTrabalhados = {}; // chave: "NOME|DATA", valor: true
       let faltas = 0;
       let totalMinutosDescontados = 0;
 
       filtrados.forEach(item => {
+        const nome = item.nome || "DESCONHECIDO";
+        let dataLimpa = formatarDataExibicao(item.data);
+        const chaveDia = `${nome}|${dataLimpa}`;
         const oc = (item.ocorrencia || "").toLowerCase();
         const obs = (item.obs || "").toLowerCase();
 
         if (oc.includes("presente")) {
-          presencas++;
+          mapaDiasTrabalhados[chaveDia] = true;
           let matchHoras = obs.match(/(\d{2}:\d{2})\s*às\s*(\d{2}:\d{2})/);
           if (matchHoras) {
             let mIni = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
@@ -311,6 +331,8 @@
           faltas++;
         }
       });
+
+      let presencas = Object.keys(mapaDiasTrabalhados).length;
 
       let totalMinutosAbsenteismo = (faltas * 420) + totalMinutosDescontados;
       let horasAbsenteismo = (totalMinutosAbsenteismo / 60).toFixed(1);
@@ -344,7 +366,7 @@
         corpoTabela.innerHTML = '';
 
         if (filtrados.length === 0) {
-          corpoTabela.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Nenhum registo encontrado para os filtros atuais.</td></tr>`;
+          corpoTabela.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Nenhum registo encontrado para os filtros atuais.</td></tr>`;
         } else {
           filtrados.forEach(reg => {
             let badgeClass = "bg-secondary";
@@ -364,6 +386,9 @@
                 <td class="text-center">${reg.turno || '-'}</td>
                 <td class="text-center"><span class="badge ${badgeClass} px-2 py-1">${reg.ocorrencia}</span></td>
                 <td>${reg.obs ? `<span class="text-warning">📝 ${reg.obs}</span>` : '<span class="text-muted">Sem observações / Justificativas</span>'}</td>
+                <td class="text-center">
+                  <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="excluirRegisto(${reg.indexOriginal})" title="Excluir Registo">🗑️ Excluir</button>
+                </td>
               </tr>
             `;
           });
@@ -372,18 +397,25 @@
         cardTabela.style.display = 'none';
       }
 
-      renderizarGraficos(dadosBrutosGlobal, document.getElementById('filtroTurnoGraficos').value, funcFiltro, mesFiltro, dataFiltroFormatada);
+      renderizarGraficos(dadosBrutosGlobal, turnoGraficoFiltro, funcFiltro, mesFiltro, dataFiltroFormatada);
     }
 
     function renderizarGraficos(dados, turnoFiltro, funcFiltro, mesFiltro, dataFiltroFormatada) {
       const estatisticasPorNome = {};
       const absenteismoPorData = {};
 
+      // Garantir que todos os funcionários existentes na base apareçam nos gráficos (mesmo com 0 faltas)
+      const todosFuncionarios = [...new Set(dados.map(item => item.nome).filter(Boolean))];
+      todosFuncionarios.forEach(nome => {
+        estatisticasPorNome[nome] = { diasUnicos: new Set(), presencas: 0, faltas: 0, ocorrencias: 0, minutosPerdidos: 0 };
+      });
+
       dados.forEach(item => {
         const turnoItem = item.turno || 'Geral';
         if (turnoFiltro !== 'todos' && turnoItem !== turnoFiltro) return; 
 
         const nome = item.nome;
+        if (!nome) return;
         if (funcFiltro && !nome.toUpperCase().includes(funcFiltro)) return;
 
         let dataLimpa = formatarDataExibicao(item.data);
@@ -395,7 +427,7 @@
         }
 
         if (!estatisticasPorNome[nome]) {
-          estatisticasPorNome[nome] = { presencas: 0, faltas: 0, ocorrencias: 0, minutosPerdidos: 0 };
+          estatisticasPorNome[nome] = { diasUnicos: new Set(), presencas: 0, faltas: 0, ocorrencias: 0, minutosPerdidos: 0 };
         }
 
         const oc = (item.ocorrencia || "").toLowerCase();
@@ -403,7 +435,7 @@
         let minutosItemPerdidos = 0;
 
         if (oc.includes("presente")) {
-          estatisticasPorNome[nome].presencas++;
+          estatisticasPorNome[nome].diasUnicos.add(dataLimpa);
           let matchHoras = obs.match(/(\d{2}:\d{2})\s*às\s*(\d{2}:\d{2})/);
           if (matchHoras) {
             let mIni = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
@@ -429,12 +461,16 @@
         }
       });
 
+      // Converter Set de dias únicos para o número real de presenças
+      Object.keys(estatisticasPorNome).forEach(nome => {
+        estatisticasPorNome[nome].presencas = estatisticasPorNome[nome].diasUnicos.size;
+      });
+
       const listaAssiduos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.presencas]).sort((a,b) => b[1] - a[1]);
-      const listaFaltosos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.faltas + (obj.ocorrencias > 0 ? 1 : 0), obj]).sort((a,b) => b[1] - a[1]);
+      const listaFaltosos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.faltas, obj]).sort((a,b) => b[1] - a[1]);
       
-      // Ajustar altura do container dinamicamente com base no número de funcionários
       const qtdFuncionarios = listaAssiduos.length;
-      const alturaDinamica = Math.max(350, qtdFuncionarios * 30); // 30px por funcionário
+      const alturaDinamica = Math.max(350, qtdFuncionarios * 30);
       document.getElementById('containerAssiduos').style.height = alturaDinamica + 'px';
       document.getElementById('containerFaltosos').style.height = alturaDinamica + 'px';
 
@@ -476,7 +512,7 @@
         type: 'bar',
         data: {
           labels: listaFaltosos.map(i => i[0]),
-          datasets: [{ label: 'Ocorrências', data: listaFaltosos.map(i => i[1]), backgroundColor: '#f72585' }]
+          datasets: [{ label: 'Faltas', data: listaFaltosos.map(i => i[1]), backgroundColor: '#f72585' }]
         },
         options: { 
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -486,7 +522,7 @@
               callbacks: {
                 label: function(context) {
                   const dFunc = estatisticasPorNome[context.label];
-                  return [` Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` Dias Trabalhados: ${dFunc.presencas}`];
+                  return [` Total de Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` Dias Trabalhados: ${dFunc.presencas}`];
                 }
               }
             }
