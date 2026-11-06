@@ -43,7 +43,7 @@
     .table-dark-custom { background-color: #233055; color: #fff; margin-bottom: 0; }
     .table-dark-custom th { background-color: #0b132b; color: #4cc9f0; border-color: #2d3e6b; text-align: center; }
     .table-dark-custom td { background-color: #1c2541; color: #fff; border-color: #2d3e6b; vertical-align: middle; }
-    canvas { cursor: pointer; } /* Indica que os nomes nos gráficos são clicáveis */
+    canvas { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -322,6 +322,7 @@
         alert("Erro ao salvar o apontamento: " + err.message);
       });
     }
+
     function atualizarRelatorio() {
       const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
       const mesFiltro = document.getElementById('filtroMes').value;
@@ -492,11 +493,13 @@
           }
           estatisticasPorNome[nome].minutosPerdidos += minutosItemPerdidos;
         }
+
+        // CORREÇÃO: Conta tanto faltas quanto atrasos e saídas antecipadas como ocorrências no segundo gráfico
         if (oc.includes("falta")) {
           estatisticasPorNome[nome].faltas++;
+          estatisticasPorNome[nome].ocorrencias++;
           minutosItemPerdidos = 420;
           estatisticasPorNome[nome].minutosPerdidos += 420;
-          estatisticasPorNome[nome].ocorrencias++;
         } else if (oc.includes("atraso") || oc.includes("saída")) {
           estatisticasPorNome[nome].ocorrencias++;
         }
@@ -511,7 +514,8 @@
       });
 
       const listaAssiduos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.presencas]).sort((a,b) => b[1] - a[1]);
-      const listaFaltosos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.faltas, obj]).sort((a,b) => b[1] - a[1]);
+      // CORREÇÃO: Mapeia o segundo gráfico pelas ocorrências totais (Faltas + Atrasos + Saídas Antecipadas)
+      const listaFaltosos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.ocorrencias, obj]).sort((a,b) => b[1] - a[1]);
       
       const qtdFuncionarios = listaAssiduos.length;
       const alturaDinamica = Math.max(350, qtdFuncionarios * 30);
@@ -529,7 +533,6 @@
       if (chartFaltosos) chartFaltosos.destroy();
       if (chartTendencia) chartTendencia.destroy();
 
-      // Função de clique no gráfico para abrir o lançamento direto para o funcionário selecionado
       function aoClicarNoGrafico(event, elements, chart) {
         if (elements.length > 0) {
           const index = elements[0].index;
@@ -553,7 +556,7 @@
               callbacks: {
                 label: function(context) {
                   const dFunc = estatisticasPorNome[context.label];
-                  return [` Dias Trabalhados: ${dFunc.presencas}`, ` Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` 🖱️ Clique para adicionar registo`];
+                  return [` Dias Trabalhados: ${dFunc.presencas}`, ` Faltas: ${dFunc.faltas}`, ` Ocorrências: ${dFunc.ocorrencias}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` 🖱️ Clique para adicionar registo`];
                 }
               }
             }
@@ -566,7 +569,7 @@
         type: 'bar',
         data: {
           labels: listaFaltosos.map(i => i[0]),
-          datasets: [{ label: 'Faltas', data: listaFaltosos.map(i => i[1]), backgroundColor: '#f72585' }]
+          datasets: [{ label: 'Ocorrências', data: listaFaltosos.map(i => i[1]), backgroundColor: '#f72585' }]
         },
         options: { 
           indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -577,7 +580,7 @@
               callbacks: {
                 label: function(context) {
                   const dFunc = estatisticasPorNome[context.label];
-                  return [` Total de Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` Dias Trabalhados: ${dFunc.presencas}`, ` 🖱️ Clique para adicionar registo`];
+                  return [` Total de Ocorrências: ${dFunc.ocorrencias}`, ` Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` 🖱️ Clique para adicionar registo`];
                 }
               }
             }
