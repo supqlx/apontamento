@@ -55,7 +55,8 @@
           <h2 class="h4 mb-1 text-info">Relatórios e Análise de Desempenho</h2>
           <p class="small m-0 text-white">Consulte presenças, faltas, horas líquidas, absenteísmo e funcionários inativos.</p>
         </div>
-        <div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="abrirModalCorrecao()">➕ Lançar Falta / Retroativo</button>
           <a href="index.html" class="btn btn-outline-light btn-sm">⬅ Voltar para Apontamentos</a>
         </div>
       </div>
@@ -131,7 +132,7 @@
       </div>
     </div>
 
-    <!-- TABELA DE RELATÓRIO DETALHADO (Aparece ao filtrar por funcionário ou data) -->
+    <!-- TABELA DE RELATÓRIO DETALHADO -->
     <div class="card card-custom mb-4" id="cardTabelaDetalhada" style="display: none;">
       <h5 class="text-info mb-3">📋 Relatório Detalhado: <span id="nomeFuncionarioSelecionado" class="text-white"></span></h5>
       <div class="table-responsive">
@@ -274,6 +275,42 @@
       }
     }
 
+    function abrirModalCorrecao() {
+      let nomeFunc = prompt("Digite o nome completo do funcionário para o lançamento retroativo:");
+      if (!nomeFunc) return;
+
+      let dataInput = prompt("Digite a data (Formato: DD/MM/AAAA):", "04/11/2026");
+      if (!dataInput) return;
+
+      let turno = prompt("Digite o turno (ex: 06h às 14h, 14h às 22h, 22h às 06h):", "06h às 14h");
+      if (!turno) return;
+
+      let ocorrencia = prompt("Digite o status (Ex: Falta, Presente, Presente + Atraso):", "Falta");
+      if (!ocorrencia) return;
+
+      let obs = prompt("Observação ou justificativa (opcional):", "Lançamento retroativo");
+
+      const dados = {
+        data: dataInput,
+        nome: nomeFunc.trim().toUpperCase(),
+        turno: turno,
+        ocorrencia: ocorrencia,
+        obs: obs || ""
+      };
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify(dados),
+        headers: { "Content-Type": "text/plain;charset=utf-8" }
+      })
+      .then(res => res.text())
+      .then(() => {
+        alert("Apontamento retroativo adicionado com sucesso!");
+        carregarDadosRelatorio();
+      })
+      .catch(err => alert("Erro ao salvar: " + err.message));
+    }
+
     function atualizarRelatorio() {
       const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
       const mesFiltro = document.getElementById('filtroMes').value;
@@ -313,7 +350,6 @@
         const oc = (item.ocorrencia || "").toLowerCase();
         const obs = (item.obs || "").toLowerCase();
 
-        // Considera presente se contiver "presente" (mesmo com atraso ou saída antecipada)
         if (oc.includes("presente")) {
           mapaDiasTrabalhados[chaveDia] = true;
           let matchHoras = obs.match(/(\d{2}:\d{2})\s*às\s*(\d{2}:\d{2})/);
@@ -359,7 +395,6 @@
       const corpoTabela = document.getElementById('corpoTabelaDetalhada');
       const spanNomeFunc = document.getElementById('nomeFuncionarioSelecionado');
 
-      // A tabela detalhada agora aparece sempre que houver filtro de funcionário OU de data específica
       if (funcFiltro.length > 0 || dataFiltroFormatada.length > 0) {
         cardTabela.style.display = 'block';
         spanNomeFunc.innerText = funcFiltro ? document.getElementById('filtroFuncionario').value : `Data: ${dataFiltroFormatada}`;
