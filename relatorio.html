@@ -162,8 +162,8 @@
             <option value="todos">Visualizar Todos os Turnos</option>
           </select>
         </div>
-        <div class="col-md-8 text-end text-muted small" style="color: #4cc9f0 !important;">
-          💡 <i>Dica: Clique diretamente no nome de qualquer funcionário nos gráficos abaixo para adicionar rapidamente um registo para ele.</i>
+        <div class="col-md-8 text-end small" style="color: #4cc9f0 !important;">
+          💡 <i>Dica: Clique diretamente no nome de qualquer funcionário nos gráficos abaixo para gerir ou corrigir um registo.</i>
         </div>
       </div>
     </div>
@@ -292,35 +292,67 @@
       let dataInput = prompt("Digite a data (Formato: DD/MM/AAAA):", dataSugerida);
       if (!dataInput) return;
 
-      let turno = prompt("Digite o turno (06h às 14h, 14h às 22h, 22h às 06h):", "06h às 14h");
-      if (!turno) return;
-
-      let ocorrencia = prompt("Status (Ex: Falta, Presente, Presente + Atraso, Presente + Saída Antecipada):", "Falta");
-      if (!ocorrencia) return;
-
-      let obs = prompt("Observação / Justificativa / Horário (opcional):", "");
-
-      const dados = {
-        data: dataInput,
-        nome: nomeFunc.trim().toUpperCase(),
-        turno: turno,
-        ocorrencia: ocorrencia,
-        obs: obs || ""
-      };
-
-      fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify(dados),
-        headers: { "Content-Type": "text/plain;charset=utf-8" }
-      })
-      .then(res => res.text())
-      .then(() => {
-        alert("Apontamento adicionado com sucesso!");
-        carregarDadosRelatorio();
-      })
-      .catch(err => {
-        alert("Erro ao salvar o apontamento: " + err.message);
+      // Verifica se já existe um registo para este funcionário nesta data exata
+      let registoExistenteIndex = -1;
+      dadosBrutosGlobal.forEach((item, idx) => {
+        if (item.nome && item.nome.trim().toUpperCase() === nomeFunc.trim().toUpperCase()) {
+          let dataLimpa = formatarDataExibicao(item.data);
+          if (dataLimpa === dataInput) {
+            registoExistenteIndex = idx;
+          }
+        }
       });
+
+      if (registoExistenteIndex !== -1) {
+        let atual = dadosBrutosGlobal[registoExistenteIndex];
+        let substituir = confirm(`Já existe um registo para ${nomeFunc.trim().toUpperCase()} na data ${dataInput} (${atual.ocorrencia}). Deseja SUBSTITUIR / EDITAR este registo?`);
+        if (!substituir) return;
+
+        let turno = prompt("Digite o turno:", atual.turno || "06h às 14h");
+        if (!turno) return;
+
+        let ocorrencia = prompt("Novo Status (Ex: Falta, Presente, Presente + Atraso, Presente + Saída Antecipada):", "Falta");
+        if (!ocorrencia) return;
+
+        let obs = prompt("Observação / Justificativa:", atual.obs || "");
+
+        // Exclui o antigo e adiciona o novo (Substituição limpa)
+        fetch(`${API_URL}?action=excluir&index=${registoExistenteIndex}`)
+          .then(res => res.text())
+          .then(() => {
+            const dadosNovo = { data: dataInput, nome: nomeFunc.trim().toUpperCase(), turno: turno, ocorrencia: ocorrencia, obs: obs || "" };
+            return fetch(API_URL, { method: 'POST', body: JSON.stringify(dadosNovo), headers: { "Content-Type": "text/plain;charset=utf-8" } });
+          })
+          .then(() => {
+            alert("Registo atualizado com sucesso!");
+            carregarDadosRelatorio();
+          })
+          .catch(err => alert("Erro ao atualizar: " + err.message));
+
+      } else {
+        // Se não existe, cria um novo normalmente
+        let turno = prompt("Digite o turno (06h às 14h, 14h às 22h, 22h às 06h):", "06h às 14h");
+        if (!turno) return;
+
+        let ocorrencia = prompt("Status (Ex: Falta, Presente, Presente + Atraso, Presente + Saída Antecipada):", "Falta");
+        if (!ocorrencia) return;
+
+        let obs = prompt("Observação / Justificativa / Horário (opcional):", "");
+
+        const dados = { data: dataInput, nome: nomeFunc.trim().toUpperCase(), turno: turno, ocorrencia: ocorrencia, obs: obs || "" };
+
+        fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify(dados),
+          headers: { "Content-Type": "text/plain;charset=utf-8" }
+        })
+        .then(res => res.text())
+        .then(() => {
+          alert("Apontamento adicionado com sucesso!");
+          carregarDadosRelatorio();
+        })
+        .catch(err => alert("Erro ao salvar o apontamento: " + err.message));
+      }
     }
 
     function atualizarRelatorio() {
@@ -494,7 +526,6 @@
           estatisticasPorNome[nome].minutosPerdidos += minutosItemPerdidos;
         }
 
-        // CORREÇÃO: Conta tanto faltas quanto atrasos e saídas antecipadas como ocorrências no segundo gráfico
         if (oc.includes("falta")) {
           estatisticasPorNome[nome].faltas++;
           estatisticasPorNome[nome].ocorrencias++;
@@ -514,7 +545,6 @@
       });
 
       const listaAssiduos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.presencas]).sort((a,b) => b[1] - a[1]);
-      // CORREÇÃO: Mapeia o segundo gráfico pelas ocorrências totais (Faltas + Atrasos + Saídas Antecipadas)
       const listaFaltosos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.ocorrencias, obj]).sort((a,b) => b[1] - a[1]);
       
       const qtdFuncionarios = listaAssiduos.length;
@@ -556,7 +586,7 @@
               callbacks: {
                 label: function(context) {
                   const dFunc = estatisticasPorNome[context.label];
-                  return [` Dias Trabalhados: ${dFunc.presencas}`, ` Faltas: ${dFunc.faltas}`, ` Ocorrências: ${dFunc.ocorrencias}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` 🖱️ Clique para adicionar registo`];
+                  return [` Dias Trabalhados: ${dFunc.presencas}`, ` Faltas: ${dFunc.faltas}`, ` Ocorrências: ${dFunc.ocorrencias}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` 🖱️ Clique para editar / gerir`];
                 }
               }
             }
@@ -580,7 +610,7 @@
               callbacks: {
                 label: function(context) {
                   const dFunc = estatisticasPorNome[context.label];
-                  return [` Total de Ocorrências: ${dFunc.ocorrencias}`, ` Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` 🖱️ Clique para adicionar registo`];
+                  return [` Total de Ocorrências: ${dFunc.ocorrencias}`, ` Faltas: ${dFunc.faltas}`, ` Horas de Absenteísmo: ${(dFunc.minutosPerdidos / 60).toFixed(1)} hrs`, ` 🖱️ Clique para editar / gerir`];
                 }
               }
             }
