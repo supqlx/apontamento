@@ -45,7 +45,6 @@
     .table-dark-custom td { background-color: #1c2541; color: #fff; border-color: #2d3e6b; vertical-align: middle; }
     canvas { cursor: pointer; }
     
-    /* Estilo do Modal Customizado */
     .modal-custom {
       display: none;
       position: fixed;
@@ -375,7 +374,6 @@
       const ocorrencia = document.getElementById('modalOcorrencia').value;
       const obs = document.getElementById('modalObs').value;
 
-      // Verifica se já existe um registo para este funcionário nesta data para substituir de forma limpa
       let registoExistenteIndex = -1;
       dadosBrutosGlobal.forEach((item, idx) => {
         if (item.nome && item.nome.trim().toUpperCase() === nome.trim().toUpperCase()) {
@@ -468,6 +466,8 @@
         }
         if (oc.includes("falta")) {
           faltas++;
+          // Se houver falta no dia, garante que o dia não conte como presença
+          delete mapaDiasTrabalhados[chaveDia];
         }
       });
 
@@ -545,7 +545,7 @@
 
       const todosFuncionarios = [...new Set(dados.map(item => item.nome).filter(Boolean))];
       todosFuncionarios.forEach(nome => {
-        estatisticasPorNome[nome] = { diasUnicos: new Set(), presencas: 0, faltas: 0, ocorrencias: 0, minutosPerdidos: 0 };
+        estatisticasPorNome[nome] = { diasTrabalhadosSet: new Set(), diasFaltaSet: new Set(), presencas: 0, faltas: 0, ocorrencias: 0, minutosPerdidos: 0 };
       });
 
       dados.forEach(item => {
@@ -565,7 +565,7 @@
         }
 
         if (!estatisticasPorNome[nome]) {
-          estatisticasPorNome[nome] = { diasUnicos: new Set(), presencas: 0, faltas: 0, ocorrencias: 0, minutosPerdidos: 0 };
+          estatisticasPorNome[nome] = { diasTrabalhadosSet: new Set(), diasFaltaSet: new Set(), presencas: 0, faltas: 0, ocorrencias: 0, minutosPerdidos: 0 };
         }
 
         const oc = (item.ocorrencia || "").toLowerCase();
@@ -573,7 +573,7 @@
         let minutosItemPerdidos = 0;
 
         if (oc.includes("presente")) {
-          estatisticasPorNome[nome].diasUnicos.add(dataLimpa);
+          estatisticasPorNome[nome].diasTrabalhadosSet.add(dataLimpa);
           let matchHoras = obs.match(/(\d{2}:\d{2})\s*às\s*(\d{2}:\d{2})/);
           if (matchHoras) {
             let mIni = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
@@ -587,6 +587,7 @@
         }
 
         if (oc.includes("falta")) {
+          estatisticasPorNome[nome].diasFaltaSet.add(dataLimpa);
           estatisticasPorNome[nome].faltas++;
           estatisticasPorNome[nome].ocorrencias++;
           minutosItemPerdidos = 420;
@@ -600,8 +601,13 @@
         }
       });
 
+      // Subtrai do conjunto de dias trabalhados qualquer dia em que o funcionário teve falta
       Object.keys(estatisticasPorNome).forEach(nome => {
-        estatisticasPorNome[nome].presencas = estatisticasPorNome[nome].diasUnicos.size;
+        let obj = estatisticasPorNome[nome];
+        obj.diasFaltaSet.forEach(diaFalta => {
+          obj.diasTrabalhadosSet.delete(diaFalta);
+        });
+        obj.presencas = obj.diasTrabalhadosSet.size;
       });
 
       const listaAssiduos = Object.entries(estatisticasPorNome).map(([n, obj]) => [n, obj.presencas]).sort((a,b) => b[1] - a[1]);
