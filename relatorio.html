@@ -247,7 +247,7 @@
           </select>
         </div>
         
-        <!-- Campos Dinâmicos de Horário para Atraso ou Saída Antecipada -->
+        <!-- Campos Dinâmicos de Horário -->
         <div id="blocoHorarios" class="row g-2 mb-3" style="display: none;">
           <div class="col-6">
             <label class="form-label fw-bold" id="labelHoraInicio">Início:</label>
@@ -407,14 +407,15 @@
       const dataInput = document.getElementById('modalData').value;
       const turno = document.getElementById('modalTurno').value;
       const ocorrencia = document.getElementById('modalOcorrencia').value;
-      let obs = document.getElementById('modalObs').value.trim();
+      let obsDigitada = document.getElementById('modalObs').value.trim();
 
       const hInicio = document.getElementById('modalHoraInicio').value;
       const hFim = document.getElementById('modalHoraFim').value;
+      let obsFinal = obsDigitada;
 
       if ((ocorrencia.includes("Atraso") || ocorrencia.includes("Saída Antecipada")) && hInicio && hFim) {
         let horarioFormatado = `${hInicio} às ${hFim}`;
-        obs = obs ? `${horarioFormatado} - ${obs}` : horarioFormatado;
+        obsFinal = obsDigitada ? `${horarioFormatado} - ${obsDigitada}` : horarioFormatado;
       }
 
       let registoExistenteIndex = -1;
@@ -428,7 +429,7 @@
       });
 
       const executarEnvio = () => {
-        const dadosNovo = { data: dataInput, nome: nome, turno: turno, ocorrencia: ocorrencia, obs: obs || "" };
+        const dadosNovo = { data: dataInput, nome: nome, turno: turno, ocorrencia: ocorrencia, obs: obsFinal };
         fetch(API_URL, {
           method: 'POST',
           body: JSON.stringify(dadosNovo),
