@@ -227,7 +227,7 @@
         </div>
         <div class="mb-3">
           <label class="form-label fw-bold">Data (DD/MM/AAAA):</label>
-          <input type="text" id="modalData" class="form-control" required placeholder="Ex: 06/11/2026">
+          <input type="text" id="modalData" class="form-control" required placeholder="Ex: 07/11/2026">
         </div>
         <div class="mb-3">
           <label class="form-label fw-bold">Turno:</label>
@@ -239,16 +239,29 @@
         </div>
         <div class="mb-3">
           <label class="form-label fw-bold">Ocorrência / Status:</label>
-          <select id="modalOcorrencia" class="form-select">
+          <select id="modalOcorrencia" class="form-select" onchange="verificarOcorrenciaModal()">
             <option value="Presente">Presente</option>
             <option value="Falta">Falta</option>
             <option value="Presente + Atraso">Presente + Atraso</option>
             <option value="Presente + Saída Antecipada">Presente + Saída Antecipada</option>
           </select>
         </div>
+        
+        <!-- Campos Dinâmicos de Horário para Atraso ou Saída Antecipada -->
+        <div id="blocoHorarios" class="row g-2 mb-3" style="display: none;">
+          <div class="col-6">
+            <label class="form-label fw-bold" id="labelHoraInicio">Início:</label>
+            <input type="time" id="modalHoraInicio" class="form-control">
+          </div>
+          <div class="col-6">
+            <label class="form-label fw-bold" id="labelHoraFim">Fim:</label>
+            <input type="time" id="modalHoraFim" class="form-control">
+          </div>
+        </div>
+
         <div class="mb-3">
-          <label class="form-label fw-bold">Observação / Justificativa / Horário:</label>
-          <input type="text" id="modalObs" class="form-control" placeholder="Ex: 14h às 18h ou Motivo médico">
+          <label class="form-label fw-bold">Observação / Justificativa:</label>
+          <input type="text" id="modalObs" class="form-control" placeholder="Ex: Motivo médico ou observação">
         </div>
         <div class="d-flex justify-content-end gap-2 mt-4">
           <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModal()">Cancelar</button>
@@ -356,10 +369,32 @@
       document.getElementById('modalNome').value = nomeFunc.trim().toUpperCase();
       document.getElementById('modalData').value = dataSugerida;
       document.getElementById('modalTurno').value = "06h às 14h";
-      document.getElementById('modalOcorrencia').value = "Falta";
+      document.getElementById('modalOcorrencia').value = "Presente";
+      document.getElementById('modalHoraInicio').value = "";
+      document.getElementById('modalHoraFim').value = "";
       document.getElementById('modalObs').value = "";
 
+      verificarOcorrenciaModal();
       document.getElementById('modalEdicao').style.display = 'flex';
+    }
+
+    function verificarOcorrenciaModal() {
+      const oc = document.getElementById('modalOcorrencia').value;
+      const bloco = document.getElementById('blocoHorarios');
+      const lblInicio = document.getElementById('labelHoraInicio');
+      const lblFim = document.getElementById('labelHoraFim');
+
+      if (oc.includes("Atraso")) {
+        bloco.style.display = 'flex';
+        lblInicio.innerText = "Início do Atraso:";
+        lblFim.innerText = "Fim do Atraso:";
+      } else if (oc.includes("Saída Antecipada")) {
+        bloco.style.display = 'flex';
+        lblInicio.innerText = "Saiu às:";
+        lblFim.innerText = "Fim do Turno:";
+      } else {
+        bloco.style.display = 'none';
+      }
     }
 
     function fecharModal() {
@@ -372,7 +407,15 @@
       const dataInput = document.getElementById('modalData').value;
       const turno = document.getElementById('modalTurno').value;
       const ocorrencia = document.getElementById('modalOcorrencia').value;
-      const obs = document.getElementById('modalObs').value;
+      let obs = document.getElementById('modalObs').value.trim();
+
+      const hInicio = document.getElementById('modalHoraInicio').value;
+      const hFim = document.getElementById('modalHoraFim').value;
+
+      if ((ocorrencia.includes("Atraso") || ocorrencia.includes("Saída Antecipada")) && hInicio && hFim) {
+        let horarioFormatado = `${hInicio} às ${hFim}`;
+        obs = obs ? `${horarioFormatado} - ${obs}` : horarioFormatado;
+      }
 
       let registoExistenteIndex = -1;
       dadosBrutosGlobal.forEach((item, idx) => {
@@ -466,7 +509,6 @@
         }
         if (oc.includes("falta")) {
           faltas++;
-          // Se houver falta no dia, garante que o dia não conte como presença
           delete mapaDiasTrabalhados[chaveDia];
         }
       });
@@ -601,7 +643,6 @@
         }
       });
 
-      // Subtrai do conjunto de dias trabalhados qualquer dia em que o funcionário teve falta
       Object.keys(estatisticasPorNome).forEach(nome => {
         let obj = estatisticasPorNome[nome];
         obj.diasFaltaSet.forEach(diaFalta => {
