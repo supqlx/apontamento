@@ -81,15 +81,22 @@
         </div>
       </div>
       
+      <!-- LINHA DE FILTROS GERAIS (COM FILTRO DE TURNO INCLUÍDO) -->
       <div class="row g-3">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label fw-bold">Funcionário:</label>
-          <input type="text" id="filtroFuncionario" class="form-control" list="listaFuncionarios" placeholder="Digite ou selecione o funcionário..." oninput="atualizarRelatorio()" onchange="atualizarRelatorio()">
+          <input type="text" id="filtroFuncionario" class="form-control" list="listaFuncionarios" placeholder="Digite ou selecione..." oninput="atualizarRelatorio()" onchange="atualizarRelatorio()">
           <datalist id="listaFuncionarios">
             <option value="A carregar...">
           </datalist>
         </div>
         <div class="col-md-3">
+          <label class="form-label fw-bold">Turno:</label>
+          <select id="filtroTurno" class="form-select" onchange="atualizarRelatorio()">
+            <option value="todos">Todos os Turnos</option>
+          </select>
+        </div>
+        <div class="col-md-2">
           <label class="form-label fw-bold">Mês:</label>
           <select id="filtroMes" class="form-select" onchange="atualizarRelatorio()">
             <option value="todos">Todos os Meses</option>
@@ -107,7 +114,7 @@
             <option value="12">Dezembro</option>
           </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label fw-bold">Data Específica:</label>
           <input type="date" id="filtroData" class="form-control" onchange="atualizarRelatorio()">
         </div>
@@ -172,19 +179,9 @@
       </div>
     </div>
 
-    <!-- SELETOR DE TURNO ESPECÍFICO PARA OS GRÁFICOS -->
-    <div class="card card-custom mb-3 py-3">
-      <div class="row align-items-center">
-        <div class="col-md-4">
-          <label for="filtroTurnoGraficos" class="form-label fw-bold mb-1">🔍 FILTRAR GRÁFICOS POR TURNO:</label>
-          <select id="filtroTurnoGraficos" class="form-select form-select-sm" onchange="atualizarRelatorio()">
-            <option value="todos">Visualizar Todos os Turnos</option>
-          </select>
-        </div>
-        <div class="col-md-8 text-end small" style="color: #4cc9f0 !important;">
-          💡 <i>Dica: Clique diretamente no nome de qualquer funcionário nos gráficos abaixo para gerir ou corrigir um registo.</i>
-        </div>
-      </div>
+    <!-- DICA DOS GRÁFICOS -->
+    <div class="text-end small mb-2" style="color: #4cc9f0 !important;">
+      💡 <i>Dica: Clique diretamente no nome de qualquer funcionário nos gráficos abaixo para gerir ou corrigir um registo.</i>
     </div>
 
     <!-- GRÁFICOS HORIZONTAIS COM ALTURA DINÂMICA -->
@@ -292,7 +289,7 @@
         dadosBrutosGlobal = dadosRel;
         dadosInativosGlobal = dadosInat;
         popularSelectFuncionarios(dadosRel);
-        popularSelectTurnosGraficos(dadosRel);
+        popularSelectTurnos(dadosRel);
         atualizarRelatorio();
       })
       .catch(err => alert("Erro ao carregar dados do relatório: " + err.message));
@@ -309,11 +306,11 @@
       });
     }
 
-    function popularSelectTurnosGraficos(dados) {
-      const select = document.getElementById('filtroTurnoGraficos');
+    function popularSelectTurnos(dados) {
+      const select = document.getElementById('filtroTurno');
       const turnos = [...new Set(dados.map(item => item.turno || 'Geral'))].sort();
       
-      select.innerHTML = '<option value="todos">Visualizar Todos os Turnos</option>';
+      select.innerHTML = '<option value="todos">Todos os Turnos</option>';
       turnos.forEach(turno => {
         let opt = document.createElement('option');
         opt.value = turno;
@@ -335,9 +332,9 @@
 
     function limparFiltros() {
       document.getElementById('filtroFuncionario').value = "";
+      document.getElementById('filtroTurno').value = "todos";
       document.getElementById('filtroMes').value = "todos";
       document.getElementById('filtroData').value = "";
-      document.getElementById('filtroTurnoGraficos').value = "todos";
       atualizarRelatorio();
     }
 
@@ -459,9 +456,9 @@
 
     function atualizarRelatorio() {
       const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
+      const turnoFiltro = document.getElementById('filtroTurno').value;
       const mesFiltro = document.getElementById('filtroMes').value;
       const dataFiltroInput = document.getElementById('filtroData').value;
-      const turnoGraficoFiltro = document.getElementById('filtroTurnoGraficos').value;
 
       let dataFiltroFormatada = "";
       if (dataFiltroInput) {
@@ -473,6 +470,7 @@
 
       let filtrados = dadosComIndice.filter(item => {
         let matchFunc = !funcFiltro || (item.nome && item.nome.toUpperCase().includes(funcFiltro));
+        let matchTurno = turnoFiltro === "todos" || (item.turno && item.turno === turnoFiltro);
         let dataLimpa = formatarDataExibicao(item.data);
         let matchData = !dataFiltroFormatada || dataLimpa === dataFiltroFormatada;
         let matchMes = true;
@@ -482,7 +480,7 @@
           matchMes = (mesItem === mesFiltro);
         }
 
-        return matchFunc && matchData && matchMes;
+        return matchFunc && matchTurno && matchData && matchMes;
       });
 
       let mapaDiasTrabalhados = {};
@@ -542,9 +540,14 @@
       const corpoTabela = document.getElementById('corpoTabelaDetalhada');
       const spanNomeFunc = document.getElementById('nomeFuncionarioSelecionado');
 
-      if (funcFiltro.length > 0 || dataFiltroFormatada.length > 0) {
+      if (funcFiltro.length > 0 || dataFiltroFormatada.length > 0 || turnoFiltro !== "todos") {
         cardTabela.style.display = 'block';
-        spanNomeFunc.innerText = funcFiltro ? document.getElementById('filtroFuncionario').value : `Data: ${dataFiltroFormatada}`;
+        let detalheTexto = [];
+        if (funcFiltro) detalheTexto.push(document.getElementById('filtroFuncionario').value);
+        if (turnoFiltro !== "todos") detalheTexto.push(`Turno: ${turnoFiltro}`);
+        if (dataFiltroFormatada) detalheTexto.push(`Data: ${dataFiltroFormatada}`);
+        
+        spanNomeFunc.innerText = detalheTexto.join(' | ');
         corpoTabela.innerHTML = '';
 
         if (filtrados.length === 0) {
@@ -579,7 +582,7 @@
         cardTabela.style.display = 'none';
       }
 
-      renderizarGraficos(dadosBrutosGlobal, turnoGraficoFiltro, funcFiltro, mesFiltro, dataFiltroFormatada);
+      renderizarGraficos(dadosBrutosGlobal, turnoFiltro, funcFiltro, mesFiltro, dataFiltroFormatada);
     }
 
     function renderizarGraficos(dados, turnoFiltro, funcFiltro, mesFiltro, dataFiltroFormatada) {
