@@ -134,7 +134,7 @@
     <div class="row g-3 mb-4">
       <div class="col-md">
         <div class="stat-card">
-          <h6 class="small">Dias Trabalhados</h6>
+          <h6 class="small">Presenças</h6>
           <h2 id="cardPresencas" class="fs-3 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
@@ -506,8 +506,7 @@
         const oc = (item.ocorrencia || "").toLowerCase();
         const obs = (item.obs || "").toLowerCase();
 
-        // Identifica o início padrão do turno (ex: 14h para turno 14h às 22h, 06h para 06h às 14h, 22h para 22h às 06h)
-        let horaInicioTurnoMinutos = 14 * 60;
+        let horaInicioTurnoMinutos = 14 * 60; // 14:00 padrão
         let turnoStr = (item.turno || "").toLowerCase();
         if (turnoStr.includes("06h")) horaInicioTurnoMinutos = 6 * 60;
         else if (turnoStr.includes("22h")) horaInicioTurnoMinutos = 22 * 60;
@@ -515,7 +514,7 @@
 
         if (oc.includes("presente")) {
           mapaDiasTrabalhados[chaveDia] = true;
-          let minutosDiaTrabalho = 420; // 7 horas padrão de trabalho líquido
+          let minutosDiaTrabalho = 420; // 7 horas cheias
           let minutosDiaAusencia = 0;
 
           let matchHoras = obs.match(/(\d{2}:\d{2})\s*(?:às|as|-)\s*(\d{2}:\d{2})/i);
@@ -524,18 +523,16 @@
             let m2 = parseInt(matchHoras[2].split(':')[0]) * 60 + parseInt(matchHoras[2].split(':')[1]);
 
             if (oc.includes("saída") || oc.includes("saida")) {
-              // Ex: 16:50 às 22:00 -> 16:50 (m1) foi a hora da saída antecipada
-              // Horas trabalhadas = desde o início do turno até a hora da saída (ex: 14:00 até 16:50 = 2h50m)
+              // m1 é a hora da saída (ex: 16:50). Horas trabalhadas = m1 - início do turno
               let horaSaida = m1;
               if (horaSaida > horaInicioTurnoMinutos) {
                 minutosDiaTrabalho = horaSaida - horaInicioTurnoMinutos;
               } else {
                 minutosDiaTrabalho = 0;
               }
-              // Absenteísmo = o restante do turno a partir da saída até o fim (ex: 16:50 até 22:00 = 5h10m)
+              // Absenteísmo = o restante até completar 7h (420 min) ou m2 - m1 se o usuário preferir, mas para saída antecipada é o tempo restante no posto
               minutosDiaAusencia = Math.max(0, 420 - minutosDiaTrabalho);
             } else if (oc.includes("atraso")) {
-              // Ex: Atraso das 14:00 às 15:00
               let duracaoAtraso = Math.abs(m2 - m1);
               minutosDiaAusencia = duracaoAtraso;
               minutosDiaTrabalho = Math.max(0, 420 - duracaoAtraso);
