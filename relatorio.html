@@ -134,7 +134,7 @@
     <div class="row g-3 mb-4">
       <div class="col-md">
         <div class="stat-card">
-          <h6 class="small">Presenças</h6>
+          <h6 class="small">Dias Trabalhados</h6>
           <h2 id="cardPresencas" class="fs-3 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
@@ -506,23 +506,43 @@
         const oc = (item.ocorrencia || "").toLowerCase();
         const obs = (item.obs || "").toLowerCase();
 
+        // Identifica o início padrão do turno (ex: 14h para turno 14h às 22h, 06h para 06h às 14h, 22h para 22h às 06h)
+        let horaInicioTurnoMinutos = 14 * 60;
+        let turnoStr = (item.turno || "").toLowerCase();
+        if (turnoStr.includes("06h")) horaInicioTurnoMinutos = 6 * 60;
+        else if (turnoStr.includes("22h")) horaInicioTurnoMinutos = 22 * 60;
+        else if (turnoStr.includes("14h")) horaInicioTurnoMinutos = 14 * 60;
+
         if (oc.includes("presente")) {
           mapaDiasTrabalhados[chaveDia] = true;
-          let minutosDiaTrabalho = 420; // 7 horas padrão (ex: 14h às 22h com 1h de intervalo ou 7h líquidas)
+          let minutosDiaTrabalho = 420; // 7 horas padrão de trabalho líquido
           let minutosDiaAusencia = 0;
 
           let matchHoras = obs.match(/(\d{2}:\d{2})\s*(?:às|as|-)\s*(\d{2}:\d{2})/i);
           if (matchHoras) {
-            let mIni = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
-            let mFim = parseInt(matchHoras[2].split(':')[0]) * 60 + parseInt(matchHoras[2].split(':')[1]);
-            if (mFim > mIni) {
-              let duracaoAusencia = (mFim - mIni);
-              minutosDiaAusencia = duracaoAusencia;
-              if (oc.includes("saída") || oc.includes("saida")) {
-                // Erika saiu às 16:50 até 22:00 -> trabalhou das 14:00 até 16:50
-                minutosDiaTrabalho = Math.max(0, 420 - duracaoAusencia);
-              } else if (oc.includes("atraso")) {
-                minutosDiaTrabalho = Math.max(0, 420 - duracaoAusencia);
+            let m1 = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
+            let m2 = parseInt(matchHoras[2].split(':')[0]) * 60 + parseInt(matchHoras[2].split(':')[1]);
+
+            if (oc.includes("saída") || oc.includes("saida")) {
+              // Ex: 16:50 às 22:00 -> 16:50 (m1) foi a hora da saída antecipada
+              // Horas trabalhadas = desde o início do turno até a hora da saída (ex: 14:00 até 16:50 = 2h50m)
+              let horaSaida = m1;
+              if (horaSaida > horaInicioTurnoMinutos) {
+                minutosDiaTrabalho = horaSaida - horaInicioTurnoMinutos;
+              } else {
+                minutosDiaTrabalho = 0;
+              }
+              // Absenteísmo = o restante do turno a partir da saída até o fim (ex: 16:50 até 22:00 = 5h10m)
+              minutosDiaAusencia = Math.max(0, 420 - minutosDiaTrabalho);
+            } else if (oc.includes("atraso")) {
+              // Ex: Atraso das 14:00 às 15:00
+              let duracaoAtraso = Math.abs(m2 - m1);
+              minutosDiaAusencia = duracaoAtraso;
+              minutosDiaTrabalho = Math.max(0, 420 - duracaoAtraso);
+            } else {
+              if (m2 > m1) {
+                minutosDiaAusencia = (m2 - m1);
+                minutosDiaTrabalho = Math.max(0, 420 - minutosDiaAusencia);
               }
             }
           } else {
@@ -652,13 +672,28 @@
         const obs = (item.obs || "").toLowerCase();
         let minutosItemPerdidos = 0;
 
+        let horaInicioTurnoMinutos = 14 * 60;
+        let turnoStr = (item.turno || "").toLowerCase();
+        if (turnoStr.includes("06h")) horaInicioTurnoMinutos = 6 * 60;
+        else if (turnoStr.includes("22h")) horaInicioTurnoMinutos = 22 * 60;
+        else if (turnoStr.includes("14h")) horaInicioTurnoMinutos = 14 * 60;
+
         if (oc.includes("presente")) {
           estatisticasPorNome[nome].diasTrabalhadosSet.add(dataLimpa);
           let matchHoras = obs.match(/(\d{2}:\d{2})\s*(?:às|as|-)\s*(\d{2}:\d{2})/i);
           if (matchHoras) {
-            let mIni = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
-            let mFim = parseInt(matchHoras[2].split(':')[0]) * 60 + parseInt(matchHoras[2].split(':')[1]);
-            if (mFim > mIni) minutosItemPerdidos = (mFim - mIni);
+            let m1 = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
+            let m2 = parseInt(matchHoras[2].split(':')[0]) * 60 + parseInt(matchHoras[2].split(':')[1]);
+
+            if (oc.includes("saída") || oc.includes("saida")) {
+              let horaSaida = m1;
+              let trabalhados = (horaSaida > horaInicioTurnoMinutos) ? (horaSaida - horaInicioTurnoMinutos) : 0;
+              minutosItemPerdidos = Math.max(0, 420 - trabalhados);
+            } else if (oc.includes("atraso")) {
+              minutosItemPerdidos = Math.abs(m2 - m1);
+            } else {
+              if (m2 > m1) minutosItemPerdidos = (m2 - m1);
+            }
           } else {
             let matchH = obs.match(/(\d+)\s*h/i);
             if (matchH) minutosItemPerdidos = (parseInt(matchH[1]) || 0) * 60;
