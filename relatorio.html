@@ -81,7 +81,7 @@
         </div>
       </div>
       
-      <!-- LINHA DE FILTROS GERAIS (COM FILTRO DE TURNO INCLUÍDO) -->
+      <!-- LINHA DE FILTROS GERAIS (INCLUINDO TURNO E STATUS/OCORRÊNCIA) -->
       <div class="row g-3">
         <div class="col-md-3">
           <label class="form-label fw-bold">Funcionário:</label>
@@ -90,10 +90,20 @@
             <option value="A carregar...">
           </datalist>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label fw-bold">Turno:</label>
           <select id="filtroTurno" class="form-select" onchange="atualizarRelatorio()">
             <option value="todos">Todos os Turnos</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-bold">Status / Ocorrência:</label>
+          <select id="filtroOcorrencia" class="form-select" onchange="atualizarRelatorio()">
+            <option value="todos">Todas as Ocorrências</option>
+            <option value="Presente">Presente (100%)</option>
+            <option value="Falta">Falta</option>
+            <option value="Atraso">Presente + Atraso</option>
+            <option value="Saída Antecipada">Presente + Saída Antecipada</option>
           </select>
         </div>
         <div class="col-md-2">
@@ -113,10 +123,6 @@
             <option value="11">Novembro</option>
             <option value="12">Dezembro</option>
           </select>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label fw-bold">Data Específica:</label>
-          <input type="date" id="filtroData" class="form-control" onchange="atualizarRelatorio()">
         </div>
         <div class="col-md-2 d-flex align-items-end">
           <button type="button" class="btn btn-secondary w-100" onclick="limparFiltros()">Limpar Filtros</button>
@@ -333,8 +339,8 @@
     function limparFiltros() {
       document.getElementById('filtroFuncionario').value = "";
       document.getElementById('filtroTurno').value = "todos";
+      document.getElementById('filtroOcorrencia').value = "todos";
       document.getElementById('filtroMes').value = "todos";
-      document.getElementById('filtroData').value = "";
       atualizarRelatorio();
     }
 
@@ -457,30 +463,35 @@
     function atualizarRelatorio() {
       const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
       const turnoFiltro = document.getElementById('filtroTurno').value;
+      const ocFiltro = document.getElementById('filtroOcorrencia').value;
       const mesFiltro = document.getElementById('filtroMes').value;
-      const dataFiltroInput = document.getElementById('filtroData').value;
-
-      let dataFiltroFormatada = "";
-      if (dataFiltroInput) {
-        const p = dataFiltroInput.split('-');
-        dataFiltroFormatada = `${p[2]}/${p[1]}/${p[0]}`;
-      }
 
       let dadosComIndice = dadosBrutosGlobal.map((item, index) => ({ ...item, indexOriginal: index }));
 
       let filtrados = dadosComIndice.filter(item => {
         let matchFunc = !funcFiltro || (item.nome && item.nome.toUpperCase().includes(funcFiltro));
         let matchTurno = turnoFiltro === "todos" || (item.turno && item.turno === turnoFiltro);
-        let dataLimpa = formatarDataExibicao(item.data);
-        let matchData = !dataFiltroFormatada || dataLimpa === dataFiltroFormatada;
-        let matchMes = true;
+        
+        let ocItem = (item.ocorrencia || "").toLowerCase();
+        let matchOc = true;
+        if (ocFiltro === "Presente") {
+          matchOc = ocItem === "presente";
+        } else if (ocFiltro === "Falta") {
+          matchOc = ocItem.includes("falta");
+        } else if (ocFiltro === "Atraso") {
+          matchOc = ocItem.includes("atraso");
+        } else if (ocFiltro === "Saída Antecipada") {
+          matchOc = ocItem.includes("saída") || ocItem.includes("saida");
+        }
 
+        let dataLimpa = formatarDataExibicao(item.data);
+        let matchMes = true;
         if (mesFiltro !== "todos" && dataLimpa) {
           const mesItem = dataLimpa.split('/')[1];
           matchMes = (mesItem === mesFiltro);
         }
 
-        return matchFunc && matchTurno && matchData && matchMes;
+        return matchFunc && matchTurno && matchOc && matchMes;
       });
 
       let mapaDiasTrabalhados = {};
@@ -540,12 +551,13 @@
       const corpoTabela = document.getElementById('corpoTabelaDetalhada');
       const spanNomeFunc = document.getElementById('nomeFuncionarioSelecionado');
 
-      if (funcFiltro.length > 0 || dataFiltroFormatada.length > 0 || turnoFiltro !== "todos") {
+      if (funcFiltro.length > 0 || turnoFiltro !== "todos" || ocFiltro !== "todos" || mesFiltro !== "todos") {
         cardTabela.style.display = 'block';
         let detalheTexto = [];
         if (funcFiltro) detalheTexto.push(document.getElementById('filtroFuncionario').value);
         if (turnoFiltro !== "todos") detalheTexto.push(`Turno: ${turnoFiltro}`);
-        if (dataFiltroFormatada) detalheTexto.push(`Data: ${dataFiltroFormatada}`);
+        if (ocFiltro !== "todos") detalheTexto.push(`Status: ${ocFiltro}`);
+        if (mesFiltro !== "todos") detalheTexto.push(`Mês: ${mesFiltro}`);
         
         spanNomeFunc.innerText = detalheTexto.join(' | ');
         corpoTabela.innerHTML = '';
@@ -582,10 +594,10 @@
         cardTabela.style.display = 'none';
       }
 
-      renderizarGraficos(dadosBrutosGlobal, turnoFiltro, funcFiltro, mesFiltro, dataFiltroFormatada);
+      renderizarGraficos(dadosBrutosGlobal, turnoFiltro, ocFiltro, funcFiltro, mesFiltro);
     }
 
-    function renderizarGraficos(dados, turnoFiltro, funcFiltro, mesFiltro, dataFiltroFormatada) {
+    function renderizarGraficos(dados, turnoFiltro, ocFiltro, funcFiltro, mesFiltro) {
       const estatisticasPorNome = {};
       const absenteismoPorData = {};
 
@@ -602,9 +614,13 @@
         if (!nome) return;
         if (funcFiltro && !nome.toUpperCase().includes(funcFiltro)) return;
 
-        let dataLimpa = formatarDataExibicao(item.data);
-        if (dataFiltroFormatada && dataLimpa !== dataFiltroFormatada) return;
+        let ocItem = (item.ocorrencia || "").toLowerCase();
+        if (ocFiltro === "Presente" && ocItem !== "presente") return;
+        if (ocFiltro === "Falta" && !ocItem.includes("falta")) return;
+        if (ocFiltro === "Atraso" && !ocItem.includes("atraso")) return;
+        if (ocFiltro === "Saída Antecipada" && !ocItem.includes("saída") && !ocItem.includes("saida")) return;
 
+        let dataLimpa = formatarDataExibicao(item.data);
         if (mesFiltro !== "todos" && dataLimpa) {
           const mesItem = dataLimpa.split('/')[1];
           if (mesItem !== mesFiltro) return;
