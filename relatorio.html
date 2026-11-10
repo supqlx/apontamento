@@ -138,7 +138,7 @@
     <div class="row g-3 mb-4">
       <div class="col-md">
         <div class="stat-card">
-          <h6 class="small">Presenças</h6>
+          <h6 class="small">Dias Trabalhados</h6>
           <h2 id="cardPresencas" class="fs-3 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
@@ -465,18 +465,21 @@
       }
     }
 
-    // FUNÇÃO CENTRALIZADA E UNIFICADA DE CÁLCULO DE HORAS
+    // MOTOR DE CÁLCULO UNIFICADO E BLINDADO CONTRA ACENTOS E PROPRIEDADES
     function calcularMinutosItem(item) {
-      const oc = (item.ocorrencia || "").toLowerCase();
-      const obs = (item.obs || "").toLowerCase();
+      const rawOc = item.ocorrencia || item.OCORRENCIA || item.status || "";
+      const oc = rawOc.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      
+      const rawObs = item.obs || item.OBS || item.observacao || item.Observacao || "";
+      const obs = rawObs.toLowerCase();
       
       let horaInicioTurnoMinutos = 14 * 60; // Padrão 14h
-      let turnoStr = (item.turno || "").toLowerCase();
+      let turnoStr = (item.turno || item.TURNO || "").toLowerCase();
       if (turnoStr.includes("06h")) horaInicioTurnoMinutos = 6 * 60;
       else if (turnoStr.includes("22h")) horaInicioTurnoMinutos = 22 * 60;
       else if (turnoStr.includes("14h")) horaInicioTurnoMinutos = 14 * 60;
 
-      let res = { trabalhados: 0, ausencia: 0 };
+      let res = { trabalhados: 420, ausencia: 0 };
 
       if (oc.includes("falta")) {
         res.ausencia = 420; // 7 horas
@@ -484,7 +487,7 @@
       } else if (oc.includes("presente")) {
         let matchHoras = obs.match(/(\d{2}:\d{2})/g);
 
-        if (oc.includes("saída") || oc.includes("saida")) {
+        if (oc.includes("saida")) {
           if (matchHoras && matchHoras.length > 0) {
             let partesHora = matchHoras[0].split(':');
             let horaSaidaMinutos = parseInt(partesHora[0]) * 60 + parseInt(partesHora[1]);
@@ -526,16 +529,18 @@
         let matchFunc = !funcFiltro || (item.nome && item.nome.toUpperCase().includes(funcFiltro));
         let matchTurno = turnoFiltro === "todos" || (item.turno && item.turno === turnoFiltro);
         
-        let ocItem = (item.ocorrencia || "").toLowerCase();
+        let rawOcItem = item.ocorrencia || item.OCORRENCIA || item.status || "";
+        let ocItem = rawOcItem.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
         let matchOc = true;
         if (ocFiltro === "Presente") {
-          matchOc = ocItem === "presente" && !ocItem.includes("atraso") && !ocItem.includes("saída") && !ocItem.includes("saida");
+          matchOc = ocItem === "presente" && !ocItem.includes("atraso") && !ocItem.includes("saida");
         } else if (ocFiltro === "Falta") {
           matchOc = ocItem.includes("falta");
         } else if (ocFiltro === "Atraso") {
           matchOc = ocItem.includes("atraso");
         } else if (ocFiltro === "Saída Antecipada") {
-          matchOc = ocItem.includes("saída") || ocItem.includes("saida");
+          matchOc = ocItem.includes("saida");
         }
 
         let dataLimpa = formatarDataExibicao(item.data);
@@ -558,7 +563,8 @@
         const nome = item.nome || "DESCONHECIDO";
         let dataLimpa = formatarDataExibicao(item.data);
         const chaveDia = `${nome}|${dataLimpa}`;
-        const oc = (item.ocorrencia || "").toLowerCase();
+        const rawOc = item.ocorrencia || item.OCORRENCIA || item.status || "";
+        const oc = rawOc.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
         let calc = calcularMinutosItem(item);
 
@@ -616,14 +622,18 @@
         } else {
           filtrados.forEach(reg => {
             let badgeClass = "bg-secondary";
-            let ocLower = (reg.ocorrencia || "").toLowerCase();
-            if (ocLower.includes("presente") && !ocLower.includes("atraso") && !ocLower.includes("saída")) {
+            let rawOcLower = reg.ocorrencia || reg.OCORRENCIA || reg.status || "";
+            let ocLower = rawOcLower.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            if (ocLower.includes("presente") && !ocLower.includes("atraso") && !ocLower.includes("saida")) {
               badgeClass = "bg-success";
-            } else if (ocLower.includes("atraso") || ocLower.includes("saída")) {
+            } else if (ocLower.includes("atraso") || ocLower.includes("saida")) {
               badgeClass = "bg-warning text-dark";
             } else if (ocLower.includes("falta")) {
               badgeClass = "bg-danger";
             }
+
+            let obsTexto = reg.obs || reg.OBS || reg.observacao || reg.Observacao || "";
 
             corpoTabela.innerHTML += `
               <tr>
@@ -631,7 +641,7 @@
                 <td class="fw-bold text-info">${reg.nome || '-'}</td>
                 <td class="text-center">${reg.turno || '-'}</td>
                 <td class="text-center"><span class="badge ${badgeClass} px-2 py-1">${reg.ocorrencia}</span></td>
-                <td>${reg.obs ? `<span class="text-warning">📝 ${reg.obs}</span>` : '<span class="text-muted">Sem observações / Justificativas</span>'}</td>
+                <td>${obsTexto ? `<span class="text-warning">📝 ${obsTexto}</span>` : '<span class="text-muted">Sem observações / Justificativas</span>'}</td>
                 <td class="text-center">
                   <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="excluirRegisto(${reg.indexOriginal})" title="Excluir Registo">🗑️ Excluir</button>
                 </td>
@@ -663,16 +673,18 @@
         if (!nome) return;
         if (funcFiltro && !nome.toUpperCase().includes(funcFiltro)) return;
 
-        let ocItem = (item.ocorrencia || "").toLowerCase();
+        let rawOcItem = item.ocorrencia || item.OCORRENCIA || item.status || "";
+        let ocItem = rawOcItem.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
         let matchOc = true;
         if (ocFiltro === "Presente") {
-          matchOc = ocItem === "presente" && !ocItem.includes("atraso") && !ocItem.includes("saída") && !ocItem.includes("saida");
+          matchOc = ocItem === "presente" && !ocItem.includes("atraso") && !ocItem.includes("saida");
         } else if (ocFiltro === "Falta") {
           matchOc = ocItem.includes("falta");
         } else if (ocFiltro === "Atraso") {
           matchOc = ocItem.includes("atraso");
         } else if (ocFiltro === "Saída Antecipada") {
-          matchOc = ocItem.includes("saída") || ocItem.includes("saida");
+          matchOc = ocItem.includes("saida");
         }
         if (!matchOc) return;
 
@@ -688,7 +700,8 @@
           estatisticasPorNome[nome] = { diasTrabalhadosSet: new Set(), diasFaltaSet: new Set(), presencas: 0, faltas: 0, ocorrencias: 0, minutosPerdidos: 0 };
         }
 
-        const oc = (item.ocorrencia || "").toLowerCase();
+        const rawOc = item.ocorrencia || item.OCORRENCIA || item.status || "";
+        const oc = rawOc.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         let calc = calcularMinutosItem(item);
 
         if (oc.includes("presente")) {
@@ -701,7 +714,7 @@
           estatisticasPorNome[nome].faltas++;
           estatisticasPorNome[nome].ocorrencias++;
           estatisticasPorNome[nome].minutosPerdidos += 420;
-        } else if (oc.includes("atraso") || oc.includes("saída") || oc.includes("saida")) {
+        } else if (oc.includes("atraso") || oc.includes("saida")) {
           estatisticasPorNome[nome].ocorrencias++;
         }
 
