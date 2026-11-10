@@ -81,7 +81,7 @@
         </div>
       </div>
       
-      <!-- LINHA DE FILTROS GERAIS -->
+      <!-- LINHA DE FILTROS GERAIS (COM DATA ESPECÍFICA RESTAURADA) -->
       <div class="row g-3">
         <div class="col-md-3">
           <label class="form-label fw-bold">Funcionário:</label>
@@ -96,14 +96,14 @@
             <option value="todos">Todos os Turnos</option>
           </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label fw-bold">Status / Ocorrência:</label>
           <select id="filtroOcorrencia" class="form-select" onchange="atualizarRelatorio()">
-            <option value="todos">Todas as Ocorrências</option>
+            <option value="todos">Todas</option>
             <option value="Presente">Presente (100%)</option>
             <option value="Falta">Falta</option>
-            <option value="Atraso">Presente + Atraso</option>
-            <option value="Saída Antecipada">Presente + Saída Antecipada</option>
+            <option value="Atraso">Atraso</option>
+            <option value="Saída Antecipada">Saída Antecipada</option>
           </select>
         </div>
         <div class="col-md-2">
@@ -124,8 +124,12 @@
             <option value="12">Dezembro</option>
           </select>
         </div>
-        <div class="col-md-2 d-flex align-items-end">
-          <button type="button" class="btn btn-secondary w-100" onclick="limparFiltros()">Limpar Filtros</button>
+        <div class="col-md-2">
+          <label class="form-label fw-bold">Data Específica:</label>
+          <input type="date" id="filtroData" class="form-control" onchange="atualizarRelatorio()">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+          <button type="button" class="btn btn-secondary w-100" onclick="limparFiltros()" title="Limpar Filtros">🗑️</button>
         </div>
       </div>
     </div>
@@ -341,6 +345,7 @@
       document.getElementById('filtroTurno').value = "todos";
       document.getElementById('filtroOcorrencia').value = "todos";
       document.getElementById('filtroMes').value = "todos";
+      document.getElementById('filtroData').value = "";
       atualizarRelatorio();
     }
 
@@ -465,6 +470,13 @@
       const turnoFiltro = document.getElementById('filtroTurno').value;
       const ocFiltro = document.getElementById('filtroOcorrencia').value;
       const mesFiltro = document.getElementById('filtroMes').value;
+      const dataFiltroInput = document.getElementById('filtroData').value;
+
+      let dataFiltroFormatada = "";
+      if (dataFiltroInput) {
+        const p = dataFiltroInput.split('-');
+        dataFiltroFormatada = `${p[2]}/${p[1]}/${p[0]}`;
+      }
 
       let dadosComIndice = dadosBrutosGlobal.map((item, index) => ({ ...item, indexOriginal: index }));
 
@@ -485,13 +497,14 @@
         }
 
         let dataLimpa = formatarDataExibicao(item.data);
+        let matchData = !dataFiltroFormatada || dataLimpa === dataFiltroFormatada;
         let matchMes = true;
         if (mesFiltro !== "todos" && dataLimpa) {
           const mesItem = dataLimpa.split('/')[1];
           matchMes = (mesItem === mesFiltro);
         }
 
-        return matchFunc && matchTurno && matchOc && matchMes;
+        return matchFunc && matchTurno && matchOc && matchData && matchMes;
       });
 
       let mapaDiasTrabalhados = {};
@@ -506,7 +519,7 @@
         const oc = (item.ocorrencia || "").toLowerCase();
         const obs = (item.obs || "").toLowerCase();
 
-        let horaInicioTurnoMinutos = 14 * 60;
+        let horaInicioTurnoMinutos = 14 * 60; // 14:00 padrão
         let turnoStr = (item.turno || "").toLowerCase();
         if (turnoStr.includes("06h")) horaInicioTurnoMinutos = 6 * 60;
         else if (turnoStr.includes("22h")) horaInicioTurnoMinutos = 22 * 60;
@@ -517,30 +530,33 @@
           let minutosDiaTrabalho = 420;
           let minutosDiaAusencia = 0;
 
-          let matchHoras = obs.match(/(\d{2}:\d{2})\s*(?:às|as|-)\s*(\d{2}:\d{2})/i);
-          if (matchHoras) {
-            let m1 = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
-            let m2 = parseInt(matchHoras[2].split(':')[0]) * 60 + parseInt(matchHoras[2].split(':')[1]);
+          let matchHoras = obs.match(/(\d{2}:\d{2})/g);
 
-            if (oc.includes("saída") || oc.includes("saida")) {
-              let horaSaida = m1;
-              minutosDiaTrabalho = (horaSaida > horaInicioTurnoMinutos) ? (horaSaida - horaInicioTurnoMinutos) : 0;
+          if (oc.includes("saída") || oc.includes("saida")) {
+            if (matchHoras && matchHoras.length > 0) {
+              let partesHora = matchHoras[0].split(':');
+              let horaSaidaMinutos = parseInt(partesHora[0]) * 60 + parseInt(partesHora[1]);
+              
+              minutosDiaTrabalho = Math.max(0, horaSaidaMinutos - horaInicioTurnoMinutos);
               minutosDiaAusencia = Math.max(0, 420 - minutosDiaTrabalho);
-            } else if (oc.includes("atraso")) {
-              minutosDiaAusencia = Math.abs(m2 - m1);
+            }
+          } else if (oc.includes("atraso") && matchHoras && matchHoras.length >= 2) {
+            let m1 = parseInt(matchHoras[0].split(':')[0]) * 60 + parseInt(matchHoras[0].split(':')[1]);
+            let m2 = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
+            minutosDiaAusencia = Math.abs(m2 - m1);
+            minutosDiaTrabalho = Math.max(0, 420 - minutosDiaAusencia);
+          } else if (matchHoras && matchHoras.length >= 2) {
+            let m1 = parseInt(matchHoras[0].split(':')[0]) * 60 + parseInt(matchHoras[0].split(':')[1]);
+            let m2 = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
+            if (m2 > m1) {
+              minutosDiaAusencia = (m2 - m1);
               minutosDiaTrabalho = Math.max(0, 420 - minutosDiaAusencia);
-            } else {
-              if (m2 > m1) {
-                minutosDiaAusencia = (m2 - m1);
-                minutosDiaTrabalho = Math.max(0, 420 - minutosDiaAusencia);
-              }
             }
           } else {
             let matchH = obs.match(/(\d+)\s*h/i);
             if (matchH) {
-              let horasAus = (parseInt(matchH[1]) || 0) * 60;
-              minutosDiaAusencia = horasAus;
-              minutosDiaTrabalho = Math.max(0, 420 - horasAus);
+              minutosDiaAusencia = (parseInt(matchH[1]) || 0) * 60;
+              minutosDiaTrabalho = Math.max(0, 420 - minutosDiaAusencia);
             }
           }
 
@@ -579,13 +595,14 @@
       const corpoTabela = document.getElementById('corpoTabelaDetalhada');
       const spanNomeFunc = document.getElementById('nomeFuncionarioSelecionado');
 
-      if (funcFiltro.length > 0 || turnoFiltro !== "todos" || ocFiltro !== "todos" || mesFiltro !== "todos") {
+      if (funcFiltro.length > 0 || turnoFiltro !== "todos" || ocFiltro !== "todos" || mesFiltro !== "todos" || dataFiltroFormatada.length > 0) {
         cardTabela.style.display = 'block';
         let detalheTexto = [];
         if (funcFiltro) detalheTexto.push(document.getElementById('filtroFuncionario').value);
         if (turnoFiltro !== "todos") detalheTexto.push(`Turno: ${turnoFiltro}`);
         if (ocFiltro !== "todos") detalheTexto.push(`Status: ${ocFiltro}`);
         if (mesFiltro !== "todos") detalheTexto.push(`Mês: ${mesFiltro}`);
+        if (dataFiltroFormatada) detalheTexto.push(`Data: ${dataFiltroFormatada}`);
         
         spanNomeFunc.innerText = detalheTexto.join(' | ');
         corpoTabela.innerHTML = '';
@@ -622,10 +639,10 @@
         cardTabela.style.display = 'none';
       }
 
-      renderizarGraficos(dadosBrutosGlobal, turnoFiltro, ocFiltro, funcFiltro, mesFiltro);
+      renderizarGraficos(dadosBrutosGlobal, turnoFiltro, ocFiltro, funcFiltro, mesFiltro, dataFiltroFormatada);
     }
 
-    function renderizarGraficos(dados, turnoFiltro, ocFiltro, funcFiltro, mesFiltro) {
+    function renderizarGraficos(dados, turnoFiltro, ocFiltro, funcFiltro, mesFiltro, dataFiltroFormatada) {
       const estatisticasPorNome = {};
       const absenteismoPorData = {};
 
@@ -649,6 +666,8 @@
         if (ocFiltro === "Saída Antecipada" && !ocItem.includes("saída") && !ocItem.includes("saida")) return;
 
         let dataLimpa = formatarDataExibicao(item.data);
+        if (dataFiltroFormatada && dataLimpa !== dataFiltroFormatada) return;
+
         if (mesFiltro !== "todos" && dataLimpa) {
           const mesItem = dataLimpa.split('/')[1];
           if (mesItem !== mesFiltro) return;
@@ -670,20 +689,23 @@
 
         if (oc.includes("presente")) {
           estatisticasPorNome[nome].diasTrabalhadosSet.add(dataLimpa);
-          let matchHoras = obs.match(/(\d{2}:\d{2})\s*(?:às|as|-)\s*(\d{2}:\d{2})/i);
-          if (matchHoras) {
-            let m1 = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
-            let m2 = parseInt(matchHoras[2].split(':')[0]) * 60 + parseInt(matchHoras[2].split(':')[1]);
-
-            if (oc.includes("saída") || oc.includes("saida")) {
-              let horaSaida = m1;
-              let trabalhados = (horaSaida > horaInicioTurnoMinutos) ? (horaSaida - horaInicioTurnoMinutos) : 0;
+          let matchHoras = obs.match(/(\d{2}:\d{2})/g);
+          
+          if (oc.includes("saída") || oc.includes("saida")) {
+            if (matchHoras && matchHoras.length > 0) {
+              let partesHora = matchHoras[0].split(':');
+              let horaSaidaMinutos = parseInt(partesHora[0]) * 60 + parseInt(partesHora[1]);
+              let trabalhados = Math.max(0, horaSaidaMinutos - horaInicioTurnoMinutos);
               minutosItemPerdidos = Math.max(0, 420 - trabalhados);
-            } else if (oc.includes("atraso")) {
-              minutosItemPerdidos = Math.abs(m2 - m1);
-            } else {
-              if (m2 > m1) minutosItemPerdidos = (m2 - m1);
             }
+          } else if (oc.includes("atraso") && matchHoras && matchHoras.length >= 2) {
+            let m1 = parseInt(matchHoras[0].split(':')[0]) * 60 + parseInt(matchHoras[0].split(':')[1]);
+            let m2 = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
+            minutosItemPerdidos = Math.abs(m2 - m1);
+          } else if (matchHoras && matchHoras.length >= 2) {
+            let m1 = parseInt(matchHoras[0].split(':')[0]) * 60 + parseInt(matchHoras[0].split(':')[1]);
+            let m2 = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
+            if (m2 > m1) minutosItemPerdidos = (m2 - m1);
           } else {
             let matchH = obs.match(/(\d+)\s*h/i);
             if (matchH) minutosItemPerdidos = (parseInt(matchH[1]) || 0) * 60;
