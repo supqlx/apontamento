@@ -650,10 +650,17 @@
         if (funcFiltro && !nome.toUpperCase().includes(funcFiltro)) return;
 
         let ocItem = (item.ocorrencia || "").toLowerCase();
-        if (ocFiltro === "Presente" && (ocItem !== "presente" || ocItem.includes("atraso") || ocItem.includes("saída"))) return;
-        if (ocFiltro === "Falta" && !ocItem.includes("falta")) return;
-        if (ocFiltro === "Atraso" && !ocItem.includes("atraso")) return;
-        if (ocFiltro === "Saída Antecipada" && !ocItem.includes("saída") && !ocItem.includes("saida")) return;
+        let matchOc = true;
+        if (ocFiltro === "Presente") {
+          matchOc = ocItem === "presente" && !ocItem.includes("atraso") && !ocItem.includes("saída") && !ocItem.includes("saida");
+        } else if (ocFiltro === "Falta") {
+          matchOc = ocItem.includes("falta");
+        } else if (ocFiltro === "Atraso") {
+          matchOc = ocItem.includes("atraso");
+        } else if (ocFiltro === "Saída Antecipada") {
+          matchOc = ocItem.includes("saída") || ocItem.includes("saida");
+        }
+        if (!matchOc) return;
 
         let dataLimpa = formatarDataExibicao(item.data);
         if (dataFiltroFormatada && dataLimpa !== dataFiltroFormatada) return;
@@ -702,7 +709,7 @@
           estatisticasPorNome[nome].ocorrencias++;
           minutosItemPerdidos = 420;
           estatisticasPorNome[nome].minutosPerdidos += 420;
-        } else if (oc.includes("atraso") || oc.includes("saída")) {
+        } else if (oc.includes("atraso") || oc.includes("saída") || oc.includes("saida")) {
           estatisticasPorNome[nome].ocorrencias++;
         }
 
@@ -794,6 +801,30 @@
         }
       });
 
+      chartTendencia = new Chart(document.getElementById('graficoTendencia').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: datasOrdenadas,
+          datasets: [{
+            label: 'Horas Perdidas',
+            data: valoresTendencia,
+            borderColor: '#ff9f1c',
+            backgroundColor: 'rgba(255, 159, 28, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } },
+            y: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }
+          }
+        }
+      });
+    }
       chartTendencia = new Chart(document.getElementById('graficoTendencia').getContext('2d'), {
         type: 'line',
         data: {
