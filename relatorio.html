@@ -36,9 +36,9 @@
       margin-bottom: 8px;
       text-transform: uppercase;
     }
-    .form-control, .form-select { background-color: #0b132b; color: #fff; border: 1px solid #2d3e6b; }
+    .form-control, .form-select { background-color: #0b132b; color: #fff; border: 1px solid #2d3e6b; font-size: 0.85rem; }
     .form-control:focus, .form-select:focus { background-color: #0b132b; color: #fff; border-color: #4cc9f0; box-shadow: none; }
-    label, .form-label { color: #4cc9f0 !important; }
+    label, .form-label { color: #4cc9f0 !important; font-size: 0.8rem; }
     .stat-card { background-color: #1c2541; border-left: 5px solid #4cc9f0; border-radius: 8px; padding: 15px; height: 100%; }
     .table-dark-custom { background-color: #233055; color: #fff; margin-bottom: 0; }
     .table-dark-custom th { background-color: #0b132b; color: #4cc9f0; border-color: #2d3e6b; text-align: center; }
@@ -81,8 +81,8 @@
         </div>
       </div>
       
-      <!-- LINHA DE FILTROS GERAIS (COM DATA ESPECÍFICA RESTAURADA) -->
-      <div class="row g-3">
+      <!-- LINHA DE FILTROS GERAIS -->
+      <div class="row g-2">
         <div class="col-md-3">
           <label class="form-label fw-bold">Funcionário:</label>
           <input type="text" id="filtroFuncionario" class="form-control" list="listaFuncionarios" placeholder="Digite ou selecione..." oninput="atualizarRelatorio()" onchange="atualizarRelatorio()">
@@ -129,7 +129,7 @@
           <input type="date" id="filtroData" class="form-control" onchange="atualizarRelatorio()">
         </div>
         <div class="col-md-1 d-flex align-items-end">
-          <button type="button" class="btn btn-secondary w-100" onclick="limparFiltros()" title="Limpar Filtros">🗑️</button>
+          <button type="button" class="btn btn-secondary w-100 btn-sm py-2" onclick="limparFiltros()" title="Limpar Filtros">🗑️</button>
         </div>
       </div>
     </div>
@@ -534,6 +534,7 @@
 
           if (oc.includes("saída") || oc.includes("saida")) {
             if (matchHoras && matchHoras.length > 0) {
+              // Para "16:50 às 22:00", matchHoras[0] é 16:50 (hora da saída)
               let partesHora = matchHoras[0].split(':');
               let horaSaidaMinutos = parseInt(partesHora[0]) * 60 + parseInt(partesHora[1]);
               
