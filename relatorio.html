@@ -138,7 +138,7 @@
     <div class="row g-3 mb-4">
       <div class="col-md">
         <div class="stat-card">
-          <h6 class="small">Dias Trabalhados</h6>
+          <h6 class="small">Presenças</h6>
           <h2 id="cardPresencas" class="fs-3 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
@@ -473,7 +473,7 @@
       const rawObs = item.obs || item.OBS || item.observacao || item.Observacao || "";
       const obs = rawObs.toLowerCase();
       
-      let horaInicioTurnoMinutos = 14 * 60; // Padrão 14h
+      let horaInicioTurnoMinutos = 14 * 60; // Padrão 14h (14:00)
       let turnoStr = (item.turno || item.TURNO || "").toLowerCase();
       if (turnoStr.includes("06h")) horaInicioTurnoMinutos = 6 * 60;
       else if (turnoStr.includes("22h")) horaInicioTurnoMinutos = 22 * 60;
@@ -488,10 +488,14 @@
         let matchHoras = obs.match(/(\d{2}:\d{2})/g);
 
         if (oc.includes("saida")) {
+          // Para "16:50 às 22:00", o primeiro horário (16:50) é a hora da saída antecipada
           if (matchHoras && matchHoras.length > 0) {
             let partesHora = matchHoras[0].split(':');
             let horaSaidaMinutos = parseInt(partesHora[0]) * 60 + parseInt(partesHora[1]);
+            
+            // Horas trabalhadas = desde o início do turno até à hora da saída
             res.trabalhados = Math.max(0, horaSaidaMinutos - horaInicioTurnoMinutos);
+            // Absenteísmo = o restante até completar as 7 horas (420 minutos) do turno
             res.ausencia = Math.max(0, 420 - res.trabalhados);
           } else {
             res.trabalhados = 420;
@@ -509,7 +513,6 @@
       }
       return res;
     }
-
     function atualizarRelatorio() {
       const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
       const turnoFiltro = document.getElementById('filtroTurno').value;
