@@ -68,7 +68,7 @@
       </div>
     </div>
 
-    <!-- GRÁFICOS ANALÍTICOS -->
+    <!-- GRÁFICOS ANALÍTICOS (VERTICAIS) -->
     <div class="row g-4 mb-4">
       <div class="col-md-6">
         <div class="card card-custom">
@@ -123,7 +123,7 @@
           <label class="form-label">Funcionário Responsável:</label>
           <input type="text" id="cadFuncionario" class="form-control" list="listaFuncionariosModal" required placeholder="Digite ou selecione o nome...">
           <datalist id="listaFuncionariosModal">
-            <!-- Preenchido dinamicamente com os nomes da aba resumo/apontamentos -->
+            <!-- Preenchido dinamicamente com os nomes da aba Resumo -->
           </datalist>
         </div>
         <div class="mb-3">
@@ -174,14 +174,14 @@
     function carregarDadosIniciais() {
       Promise.all([
         fetch(`${API_URL}?action=getReclamacoes`).then(res => res.json()).catch(() => []),
-        fetch(`${API_URL}?action=getRelatorio`).then(res => res.json()).catch(() => [])
+        fetch(`${API_URL}?action=getFuncionarios`).then(res => res.json()).catch(() => [])
       ])
-      .then(([reclamacoes, relatorio]) => {
+      .then(([reclamacoes, funcionarios]) => {
         reclamacoesGlobais = reclamacoes;
         
+        let nomesResumo = funcionarios.map(item => item.nome);
         let nomesReclamacoes = reclamacoes.map(item => item.funcionario);
-        let nomesRelatorio = relatorio.map(item => item.nome);
-        listaFuncionariosGeral = [...new Set([...nomesReclamacoes, ...nomesRelatorio])].filter(Boolean).sort();
+        listaFuncionariosGeral = [...new Set([...nomesResumo, ...nomesReclamacoes])].filter(Boolean).sort();
 
         popularDatalistFuncionarios();
         renderizarTabela(reclamacoes);
@@ -306,22 +306,40 @@
       if (chartFunc) chartFunc.destroy();
       if (chartProd) chartProd.destroy();
 
+      // GRÁFICO VERTICAL DE FUNCIONÁRIO
       chartFunc = new Chart(document.getElementById('graficoFuncionario').getContext('2d'), {
         type: 'bar',
         data: {
           labels: labelsFunc,
           datasets: [{ label: 'Reclamações', data: valoresFunc, backgroundColor: '#f72585' }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' } } } }
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: { legend: { display: false } }, 
+          scales: { 
+            x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, 
+            y: { ticks: { color: '#fff', stepSize: 1 }, grid: { color: '#2d3e6b' } } 
+          } 
+        }
       });
 
+      // GRÁFICO VERTICAL DE PRODUTO
       chartProd = new Chart(document.getElementById('graficoProduto').getContext('2d'), {
         type: 'bar',
         data: {
           labels: labelsProd,
           datasets: [{ label: 'Reclamações', data: valoresProd, backgroundColor: '#4cc9f0' }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#fff' } }, y: { ticks: { color: '#fff' } } } }
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: { legend: { display: false } }, 
+          scales: { 
+            x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, 
+            y: { ticks: { color: '#fff', stepSize: 1 }, grid: { color: '#2d3e6b' } } 
+          } 
+        }
       });
     }
   </script>
