@@ -473,38 +473,23 @@
       const rawObs = item.obs || item.OBS || item.observacao || item.Observacao || "";
       const obs = rawObs.toLowerCase();
       
-      let horaInicioTurnoMinutos = 14 * 60; // Padrão 14h (14:00)
-      let turnoStr = (item.turno || item.TURNO || "").toLowerCase();
-      if (turnoStr.includes("06h")) horaInicioTurnoMinutos = 6 * 60;
-      else if (turnoStr.includes("22h")) horaInicioTurnoMinutos = 22 * 60;
-      else if (turnoStr.includes("14h")) horaInicioTurnoMinutos = 14 * 60;
-
       let res = { trabalhados: 420, ausencia: 0 };
 
       if (oc.includes("falta")) {
-        res.ausencia = 420; // 7 horas
+        res.ausencia = 420; // 7 horas cheias
         res.trabalhados = 0;
       } else if (oc.includes("presente")) {
         let matchHoras = obs.match(/(\d{2}:\d{2})/g);
 
-        if (oc.includes("saida")) {
-          // Para "16:50 às 22:00", o primeiro horário (16:50) é a hora da saída antecipada
-          if (matchHoras && matchHoras.length > 0) {
-            let partesHora = matchHoras[0].split(':');
-            let horaSaidaMinutos = parseInt(partesHora[0]) * 60 + parseInt(partesHora[1]);
-            
-            // Horas trabalhadas = desde o início do turno até à hora da saída
-            res.trabalhados = Math.max(0, horaSaidaMinutos - horaInicioTurnoMinutos);
-            // Absenteísmo = o restante até completar as 7 horas (420 minutos) do turno
-            res.ausencia = Math.max(0, 420 - res.trabalhados);
-          } else {
-            res.trabalhados = 420;
-            res.ausencia = 0;
-          }
-        } else if (oc.includes("atraso") && matchHoras && matchHoras.length >= 2) {
+        // Se houver um intervalo de horas (ex: 08:30 às 10:20 ou 16:50 às 22:00)
+        if (matchHoras && matchHoras.length >= 2) {
           let m1 = parseInt(matchHoras[0].split(':')[0]) * 60 + parseInt(matchHoras[0].split(':')[1]);
           let m2 = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
+          
+          // O absenteísmo é sempre o tamanho do intervalo ausente (Fim - Início)
           res.ausencia = Math.abs(m2 - m1);
+          
+          // As horas líquidas trabalhadas são o total do turno (420 min) menos a ausência
           res.trabalhados = Math.max(0, 420 - res.ausencia);
         } else {
           res.trabalhados = 420;
