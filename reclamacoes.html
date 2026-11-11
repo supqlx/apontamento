@@ -12,7 +12,7 @@
     .form-control, .form-select { background-color: #0b132b; color: #fff; border: 1px solid #2d3e6b; font-size: 0.85rem; }
     .form-control:focus, .form-select:focus { background-color: #0b132b; color: #fff; border-color: #4cc9f0; box-shadow: none; }
     label, .form-label { color: #4cc9f0 !important; font-size: 0.8rem; font-weight: bold; }
-    .table-dark-custom { background-color: #233055; color: #fff; }
+    .table-dark-custom { background-color: #233055; color: #fff; margin-bottom: 0; }
     .table-dark-custom th { background-color: #0b132b; color: #4cc9f0; border-color: #2d3e6b; text-align: center; }
     .table-dark-custom td { background-color: #1c2541; color: #fff; border-color: #2d3e6b; vertical-align: middle; }
     
@@ -43,10 +43,10 @@
     <div class="card card-custom d-flex flex-row justify-content-between align-items-center flex-wrap gap-3">
       <div>
         <h2 class="h4 mb-1 text-info">Gestão de Reclamações de Clientes</h2>
-        <p class="small m-0 text-white">Registo e análise de reclamações por funcionário, data, cliente e produto.</p>
+        <p class="small m-0 text-white">Registo, análise de severidade e causas-raiz por funcionário, produto e motivo.</p>
       </div>
       <div class="d-flex gap-2">
-        <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="abrirModal()">➕ Nova Reclamação</button>
+        <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="abrirModalNova()">➕ Nova Reclamação</button>
         <a href="relatorio.html" class="btn btn-outline-light btn-sm">⬅ Voltar aos Relatórios</a>
         <a href="index.html" class="btn btn-outline-light btn-sm">⬅ Voltar para Apontamentos</a>
       </div>
@@ -95,27 +95,35 @@
       </div>
     </div>
 
-    <!-- GRÁFICOS ANALÍTICOS (HORIZONTAIS) -->
+    <!-- GRÁFICOS ANALÍTICOS (3 PAINÉIS: FUNCIONÁRIO, PRODUTO E MOTIVOS) -->
     <div class="row g-4 mb-4">
-      <div class="col-md-6">
+      <div class="col-md-4">
         <div class="card card-custom">
           <h5 class="text-info mb-3">📊 Reclamações por Funcionário</h5>
-          <div id="containerGraficoFunc" style="position: relative; height: 350px; overflow-y: auto;">
+          <div id="containerGraficoFunc" style="position: relative; height: 320px; overflow-y: auto;">
             <canvas id="graficoFuncionario"></canvas>
           </div>
         </div>
       </div>
-      <div class="col-md-6">
+      <div class="col-md-4">
         <div class="card card-custom">
           <h5 class="text-warning mb-3">📦 Reclamações por Produto</h5>
-          <div id="containerGraficoProd" style="position: relative; height: 350px; overflow-y: auto;">
+          <div id="containerGraficoProd" style="position: relative; height: 320px; overflow-y: auto;">
             <canvas id="graficoProduto"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card card-custom">
+          <h5 class="text-danger mb-3">🔍 Motivos de Defeitos (Causa-Raiz)</h5>
+          <div style="position: relative; height: 320px;">
+            <canvas id="graficoMotivos"></canvas>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- TABELA DETALHADA -->
+    <!-- TABELA DETALHADA DE RECLAMAÇÕES COM EDICÃO/EXCLUSÃO E ALERTAS DE SEVERIDADE -->
     <div class="card card-custom">
       <h5 class="text-info mb-3">📋 Registo Detalhado de Reclamações</h5>
       <div class="table-responsive">
@@ -126,26 +134,29 @@
               <th>Funcionário</th>
               <th>Produto</th>
               <th>Cliente</th>
-              <th>Motivo</th>
+              <th class="text-center">Motivo (Defeito)</th>
               <th>Observação</th>
+              <th class="text-center">Ações</th>
             </tr>
           </thead>
           <tbody id="tabelaReclamacoes">
-            <tr><td colspan="6" class="text-center text-muted">A carregar dados...</td></tr>
+            <tr><td colspan="7" class="text-center text-muted">A carregar dados...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- POP-UP MODAL DE NOVO LANÇAMENTO -->
+  <!-- POP-UP MODAL DE REGISTO / EDIÇÃO -->
   <div id="modalReclamacao" class="modal-custom">
     <div class="modal-content-custom">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="text-info m-0">Registar Reclamação de Cliente</h4>
+        <h4 id="modalTitulo" class="text-info m-0">Registar Reclamação</h4>
         <button type="button" class="btn-close btn-close-white" onclick="fecharModal()"></button>
       </div>
       <form id="formReclamacao" onsubmit="salvarReclamacao(event)">
+        <input type="hidden" id="modalIndexOriginal" value="-1">
+        
         <div class="mb-3">
           <label class="form-label">Data (DD/MM/AAAA):</label>
           <input type="text" id="cadData" class="form-control" required placeholder="Ex: 11/11/2026">
@@ -166,14 +177,14 @@
         <div class="mb-3">
           <label class="form-label">Motivo da Reclamação:</label>
           <select id="cadMotivo" class="form-select">
-            <option value="Rebarba">Rebarba</option>
-            <option value="Bolhas de ar">Bolhas de ar</option>
-            <option value="Falha de injeção">Falha de injeção</option>
-            <option value="Deformação">Deformação</option>
-            <option value="Chupagem">Chupagem</option>
-            <option value="Fora de tonalidade">Fora de tonalidade</option>
-            <option value="Pinta">Pinta</option>
-            <option value="Sujeira">Sujeira</option>
+            <option value="Rebarba">Rebarba (Leve)</option>
+            <option value="Bolhas de ar">Bolhas de ar (Média)</option>
+            <option value="Falha de injeção">Falha de injeção (Alta)</option>
+            <option value="Deformação">Deformação (Alta)</option>
+            <option value="Chupagem">Chupagem (Média)</option>
+            <option value="Fora de tonalidade">Fora de tonalidade (Alta)</option>
+            <option value="Pinta">Pinta (Média)</option>
+            <option value="Sujeira">Sujeira (Leve)</option>
             <option value="Outros">Outros</option>
           </select>
         </div>
@@ -183,7 +194,7 @@
         </div>
         <div class="d-flex justify-content-end gap-2 mt-4">
           <button type="button" class="btn btn-secondary btn-sm" onclick="fecharModal()">Cancelar</button>
-          <button type="submit" class="btn btn-info btn-sm fw-bold">Guardar Reclamação</button>
+          <button type="submit" class="btn btn-info btn-sm fw-bold" id="btnSalvarModal">Guardar Reclamação</button>
         </div>
       </form>
     </div>
@@ -195,6 +206,7 @@
     let listaFuncionariosGeral = [];
     let chartFunc = null;
     let chartProd = null;
+    let chartMotivos = null;
 
     window.onload = function() {
       carregarDadosIniciais();
@@ -206,7 +218,7 @@
         fetch(`${API_URL}?action=getFuncionarios`).then(res => res.json()).catch(() => [])
       ])
       .then(([reclamacoes, funcionarios]) => {
-        reclamacoesGlobais = reclamacoes;
+        reclamacoesGlobais = reclamacoes.map((item, idx) => ({ ...item, indexOriginal: idx }));
         
         let nomesResumo = funcionarios.map(item => item.nome);
         let nomesReclamacoes = reclamacoes.map(item => item.funcionario);
@@ -237,7 +249,11 @@
       return dataStr;
     }
 
-    function abrirModal() {
+    function abrirModalNova() {
+      document.getElementById('modalTitulo').innerText = "Registar Reclamação de Cliente";
+      document.getElementById('modalIndexOriginal').value = "-1";
+      document.getElementById('btnSalvarModal').innerText = "Guardar Reclamação";
+      
       let hoje = new Date();
       let d = String(hoje.getDate()).padStart(2, '0');
       let m = String(hoje.getMonth() + 1).padStart(2, '0');
@@ -246,7 +262,25 @@
       document.getElementById('cadFuncionario').value = '';
       document.getElementById('cadProduto').value = '';
       document.getElementById('cadCliente').value = '';
+      document.getElementById('cadMotivo').value = 'Rebarba';
       document.getElementById('cadObs').value = '';
+      document.getElementById('modalReclamacao').style.display = 'flex';
+    }
+
+    function abrirModalEdicao(indexOriginal) {
+      let item = reclamacoesGlobais.find(i => i.indexOriginal === indexOriginal);
+      if (!item) return;
+
+      document.getElementById('modalTitulo').innerText = "Editar Reclamação de Cliente";
+      document.getElementById('modalIndexOriginal').value = indexOriginal;
+      document.getElementById('btnSalvarModal').innerText = "Salvar Alterações";
+
+      document.getElementById('cadData').value = formatarDataExibicao(item.data);
+      document.getElementById('cadFuncionario').value = item.funcionario || '';
+      document.getElementById('cadProduto').value = item.produto || '';
+      document.getElementById('cadCliente').value = item.cliente || '';
+      document.getElementById('cadMotivo').value = item.motivo || 'Rebarba';
+      document.getElementById('cadObs').value = item.obs || '';
       document.getElementById('modalReclamacao').style.display = 'flex';
     }
 
@@ -256,6 +290,8 @@
 
     function salvarReclamacao(e) {
       e.preventDefault();
+      let indexOriginal = parseInt(document.getElementById('modalIndexOriginal').value);
+
       let payload = {
         data: document.getElementById('cadData').value,
         funcionario: document.getElementById('cadFuncionario').value.toUpperCase(),
@@ -265,6 +301,11 @@
         obs: document.getElementById('cadObs').value
       };
 
+      if (indexOriginal !== -1) {
+        payload.action = "editarReclamacao";
+        payload.indexOriginal = indexOriginal;
+      }
+
       fetch(API_URL, {
         method: 'POST',
         body: JSON.stringify(payload),
@@ -272,11 +313,23 @@
       })
       .then(res => res.text())
       .then(() => {
-        alert("Reclamação registada com sucesso!");
+        alert(indexOriginal === -1 ? "Reclamação registada com sucesso!" : "Reclamação atualizada com sucesso!");
         fecharModal();
         carregarDadosIniciais();
       })
       .catch(err => alert("Erro ao salvar: " + err.message));
+    }
+
+    function excluirReclamacao(indexOriginal) {
+      if (confirm("Tem certeza que deseja excluir este registo de reclamação?")) {
+        fetch(`${API_URL}?action=excluirReclamacao&index=${indexOriginal}`)
+          .then(res => res.text())
+          .then(() => {
+            alert("Reclamação excluída com sucesso!");
+            carregarDadosIniciais();
+          })
+          .catch(err => alert("Erro ao excluir: " + err.message));
+      }
     }
 
     function filtrarDados() {
@@ -322,22 +375,45 @@
       filtrarDados();
     }
 
+    // RETORNA O BADGE COLORIDO CONFORME A SEVERIDADE DO DEFEITO
+    function obterBadgeSeveridade(motivo) {
+      if (!motivo) return `<span class="badge bg-secondary">Outros</span>`;
+      let m = motivo.toLowerCase();
+      
+      // ALTA SEVERIDADE (Vermelho Vivo/Escuro)
+      if (m.includes("falha") || m.includes("deforma") || m.includes("tonalidade")) {
+        return `<span class="badge bg-danger px-2 py-1" title="Severidade Alta (Crítico)">🔴 ${motivo}</span>`;
+      }
+      // MÉDIA SEVERIDADE (Laranja/Amarelo)
+      if (m.includes("chupagem") || m.includes("bolha") || m.includes("pinta")) {
+        return `<span class="badge bg-warning text-dark px-2 py-1" title="Severidade Média">🟠 ${motivo}</span>`;
+      }
+      // BAIXA SEVERIDADE / ACABAMENTO (Azul)
+      return `<span class="badge bg-info text-dark px-2 py-1" title="Severidade Leve">🔵 ${motivo}</span>`;
+    }
+
     function renderizarTabela(dados) {
       let tbody = document.getElementById('tabelaReclamacoes');
       tbody.innerHTML = '';
       if (!dados || dados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Nenhuma reclamação encontrada com os filtros atuais.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">Nenhuma reclamação encontrada com os filtros atuais.</td></tr>`;
         return;
       }
       dados.forEach(item => {
+        let badgeMotivo = obterBadgeSeveridade(item.motivo);
+
         tbody.innerHTML += `
           <tr>
             <td class="text-center">${formatarDataExibicao(item.data)}</td>
             <td class="fw-bold text-info">${item.funcionario}</td>
             <td>${item.produto}</td>
             <td>${item.cliente || '-'}</td>
-            <td><span class="badge bg-danger">${item.motivo}</span></td>
-            <td>${item.obs || '-'}</td>
+            <td class="text-center">${badgeMotivo}</td>
+            <td>${item.obs ? `<span class="text-white">${item.obs}</span>` : '<span class="text-muted">Sem detalhes</span>'}</td>
+            <td class="text-center">
+              <button class="btn btn-outline-warning btn-sm py-0 px-2 me-1" onclick="abrirModalEdicao(${item.indexOriginal})" title="Editar Reclamação">✏️ Editar</button>
+              <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="excluirReclamacao(${item.indexOriginal})" title="Excluir Reclamação">🗑️ Excluir</button>
+            </td>
           </tr>
         `;
       });
@@ -346,13 +422,17 @@
     function renderizarGraficos(dados) {
       let contFunc = {};
       let contProd = {};
+      let contMotivos = {};
 
       if (Array.isArray(dados)) {
         dados.forEach(item => {
           let f = item.funcionario || 'N/D';
           let p = item.produto || 'N/D';
+          let m = item.motivo || 'Outros';
+
           contFunc[f] = (contFunc[f] || 0) + 1;
           contProd[p] = (contProd[p] || 0) + 1;
+          contMotivos[m] = (contMotivos[m] || 0) + 1;
         });
       }
 
@@ -362,14 +442,19 @@
       let labelsProd = Object.keys(contProd);
       let valoresProd = Object.values(contProd);
 
-      let alturaFunc = Math.max(300, labelsFunc.length * 35);
-      let alturaProd = Math.max(300, labelsProd.length * 35);
+      let labelsMotivos = Object.keys(contMotivos);
+      let valoresMotivos = Object.values(contMotivos);
+
+      let alturaFunc = Math.max(280, labelsFunc.length * 35);
+      let alturaProd = Math.max(280, labelsProd.length * 35);
       document.getElementById('containerGraficoFunc').style.height = alturaFunc + 'px';
       document.getElementById('containerGraficoProd').style.height = alturaProd + 'px';
 
       if (chartFunc) chartFunc.destroy();
       if (chartProd) chartProd.destroy();
+      if (chartMotivos) chartMotivos.destroy();
 
+      // GRÁFICO HORIZONTAL DE FUNCIONÁRIO
       chartFunc = new Chart(document.getElementById('graficoFuncionario').getContext('2d'), {
         type: 'bar',
         data: {
@@ -377,9 +462,7 @@
           datasets: [{ label: 'Reclamações', data: valoresFunc, backgroundColor: '#f72585' }]
         },
         options: { 
-          indexAxis: 'y', 
-          responsive: true, 
-          maintainAspectRatio: false,
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } }, 
           scales: { 
             x: { ticks: { color: '#fff', stepSize: 1 }, grid: { color: '#2d3e6b' }, beginAtZero: true }, 
@@ -388,6 +471,7 @@
         }
       });
 
+      // GRÁFICO HORIZONTAL DE PRODUTO
       chartProd = new Chart(document.getElementById('graficoProduto').getContext('2d'), {
         type: 'bar',
         data: {
@@ -395,14 +479,38 @@
           datasets: [{ label: 'Reclamações', data: valoresProd, backgroundColor: '#4cc9f0' }]
         },
         options: { 
-          indexAxis: 'y', 
-          responsive: true, 
-          maintainAspectRatio: false,
+          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } }, 
           scales: { 
             x: { ticks: { color: '#fff', stepSize: 1 }, grid: { color: '#2d3e6b' }, beginAtZero: true }, 
             y: { ticks: { color: '#fff', font: { size: 11 } }, grid: { display: false } } 
           } 
+        }
+      });
+
+      // GRÁFICO DE DONUT DE MOTIVOS (CAUSA-RAIZ)
+      const coresPaleta = ['#f72585', '#7209b7', '#4361ee', '#4cc9f0', '#ff9f1c', '#e71d36', '#2ec4b6', '#ff99c8'];
+
+      chartMotivos = new Chart(document.getElementById('graficoMotivos').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: labelsMotivos,
+          datasets: [{
+            data: valoresMotivos,
+            backgroundColor: coresPaleta.slice(0, labelsMotivos.length),
+            borderWidth: 2,
+            borderColor: '#1c2541'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { 
+              position: 'bottom',
+              labels: { color: '#fff', font: { size: 10 } }
+            }
+          }
         }
       });
     }
