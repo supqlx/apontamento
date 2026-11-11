@@ -68,18 +68,22 @@
       </div>
     </div>
 
-    <!-- GRÁFICOS ANALÍTICOS (VERTICAIS) -->
+    <!-- GRÁFICOS ANALÍTICOS (COM ALTURA DINÂMICA E BARRAS HORIZONTAIS) -->
     <div class="row g-4 mb-4">
       <div class="col-md-6">
         <div class="card card-custom">
           <h5 class="text-info mb-3">📊 Reclamações por Funcionário</h5>
-          <div style="position: relative; height: 300px;"><canvas id="graficoFuncionario"></canvas></div>
+          <div id="containerGraficoFunc" style="position: relative; height: 350px; overflow-y: auto;">
+            <canvas id="graficoFuncionario"></canvas>
+          </div>
         </div>
       </div>
       <div class="col-md-6">
         <div class="card card-custom">
           <h5 class="text-warning mb-3">📦 Reclamações por Produto</h5>
-          <div style="position: relative; height: 300px;"><canvas id="graficoProduto"></canvas></div>
+          <div id="containerGraficoProd" style="position: relative; height: 350px; overflow-y: auto;">
+            <canvas id="graficoProduto"></canvas>
+          </div>
         </div>
       </div>
     </div>
@@ -122,9 +126,7 @@
         <div class="mb-3">
           <label class="form-label">Funcionário Responsável:</label>
           <input type="text" id="cadFuncionario" class="form-control" list="listaFuncionariosModal" required placeholder="Digite ou selecione o nome...">
-          <datalist id="listaFuncionariosModal">
-            <!-- Preenchido dinamicamente com os nomes da aba Resumo -->
-          </datalist>
+          <datalist id="listaFuncionariosModal"></datalist>
         </div>
         <div class="mb-3">
           <label class="form-label">Produto / Molde:</label>
@@ -303,10 +305,16 @@
       let labelsProd = Object.keys(contProd);
       let valoresProd = Object.values(contProd);
 
+      // Altura dinâmica para acomodar perfeitamente os nomes em lista
+      let alturaFunc = Math.max(300, labelsFunc.length * 35);
+      let alturaProd = Math.max(300, labelsProd.length * 35);
+      document.getElementById('containerGraficoFunc').style.height = alturaFunc + 'px';
+      document.getElementById('containerGraficoProd').style.height = alturaProd + 'px';
+
       if (chartFunc) chartFunc.destroy();
       if (chartProd) chartProd.destroy();
 
-      // GRÁFICO VERTICAL DE FUNCIONÁRIO
+      // GRÁFICO HORIZONTAL DE FUNCIONÁRIO (EXATAMENTE IGUAL AOS RELATÓRIOS)
       chartFunc = new Chart(document.getElementById('graficoFuncionario').getContext('2d'), {
         type: 'bar',
         data: {
@@ -314,17 +322,18 @@
           datasets: [{ label: 'Reclamações', data: valoresFunc, backgroundColor: '#f72585' }]
         },
         options: { 
+          indexAxis: 'y', 
           responsive: true, 
-          maintainAspectRatio: false, 
+          maintainAspectRatio: false,
           plugins: { legend: { display: false } }, 
           scales: { 
-            x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, 
-            y: { ticks: { color: '#fff', stepSize: 1 }, grid: { color: '#2d3e6b' } } 
+            x: { ticks: { color: '#fff', stepSize: 1 }, grid: { color: '#2d3e6b' }, beginAtZero: true }, 
+            y: { ticks: { color: '#fff', font: { size: 11 } }, grid: { display: false } } 
           } 
         }
       });
 
-      // GRÁFICO VERTICAL DE PRODUTO
+      // GRÁFICO HORIZONTAL DE PRODUTO
       chartProd = new Chart(document.getElementById('graficoProduto').getContext('2d'), {
         type: 'bar',
         data: {
@@ -332,12 +341,13 @@
           datasets: [{ label: 'Reclamações', data: valoresProd, backgroundColor: '#4cc9f0' }]
         },
         options: { 
+          indexAxis: 'y', 
           responsive: true, 
-          maintainAspectRatio: false, 
+          maintainAspectRatio: false,
           plugins: { legend: { display: false } }, 
           scales: { 
-            x: { ticks: { color: '#fff' }, grid: { color: '#2d3e6b' } }, 
-            y: { ticks: { color: '#fff', stepSize: 1 }, grid: { color: '#2d3e6b' } } 
+            x: { ticks: { color: '#fff', stepSize: 1 }, grid: { color: '#2d3e6b' }, beginAtZero: true }, 
+            y: { ticks: { color: '#fff', font: { size: 11 } }, grid: { display: false } } 
           } 
         }
       });
