@@ -123,7 +123,7 @@
           <label class="form-label">Funcionário Responsável:</label>
           <input type="text" id="cadFuncionario" class="form-control" list="listaFuncionariosModal" required placeholder="Digite ou selecione o nome...">
           <datalist id="listaFuncionariosModal">
-            <!-- Preenchido dinamicamente via JS -->
+            <!-- Preenchido dinamicamente com os nomes da aba resumo/apontamentos -->
           </datalist>
         </div>
         <div class="mb-3">
@@ -173,13 +173,12 @@
 
     function carregarDadosIniciais() {
       Promise.all([
-        fetch(`${API_URL}?action=getReclamacoes`).then(res => res.json()),
+        fetch(`${API_URL}?action=getReclamacoes`).then(res => res.json()).catch(() => []),
         fetch(`${API_URL}?action=getRelatorio`).then(res => res.json()).catch(() => [])
       ])
       .then(([reclamacoes, relatorio]) => {
         reclamacoesGlobais = reclamacoes;
         
-        // Recolhe os nomes tanto do relatório de apontamentos quanto das reclamações já feitas
         let nomesReclamacoes = reclamacoes.map(item => item.funcionario);
         let nomesRelatorio = relatorio.map(item => item.nome);
         listaFuncionariosGeral = [...new Set([...nomesReclamacoes, ...nomesRelatorio])].filter(Boolean).sort();
