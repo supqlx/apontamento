@@ -138,7 +138,7 @@
     <div class="row g-3 mb-4">
       <div class="col-md">
         <div class="stat-card">
-          <h6 class="small">Presenças Geral</h6>
+          <h6 class="small">Presenças</h6>
           <h2 id="cardPresencas" class="fs-3 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
@@ -465,7 +465,18 @@
       }
     }
 
-    // MOTOR DE CÁLCULO UNIFICADO E BLINDADO CONTRA ACENTOS E PROPRIEDADES
+    // FORMATAÇÃO AMIGÁVEL EM HORAS E MINUTOS
+    function formatarHorasMinutos(totalMinutos) {
+      if (!totalMinutos || totalMinutos <= 0) return "0 hrs";
+      const horas = Math.floor(totalMinutos / 60);
+      const minutos = totalMinutos % 60;
+      if (minutos === 0) {
+        return `${horas} hrs`;
+      }
+      return `${horas}h ${minutos}m`;
+    }
+
+    // MOTOR DE CÁLCULO UNIFICADO E CORRETO
     function calcularMinutosItem(item) {
       const rawOc = item.ocorrencia || item.OCORRENCIA || item.status || "";
       const oc = rawOc.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -476,20 +487,16 @@
       let res = { trabalhados: 420, ausencia: 0 };
 
       if (oc.includes("falta")) {
-        res.ausencia = 420; // 7 horas cheias
+        res.ausencia = 420; 
         res.trabalhados = 0;
       } else if (oc.includes("presente")) {
         let matchHoras = obs.match(/(\d{2}:\d{2})/g);
 
-        // Se houver um intervalo de horas (ex: 08:30 às 10:20 ou 16:50 às 22:00)
         if (matchHoras && matchHoras.length >= 2) {
           let m1 = parseInt(matchHoras[0].split(':')[0]) * 60 + parseInt(matchHoras[0].split(':')[1]);
           let m2 = parseInt(matchHoras[1].split(':')[0]) * 60 + parseInt(matchHoras[1].split(':')[1]);
           
-          // O absenteísmo é sempre o tamanho do intervalo ausente (Fim - Início)
           res.ausencia = Math.abs(m2 - m1);
-          
-          // As horas líquidas trabalhadas são o total do turno (420 min) menos a ausência
           res.trabalhados = Math.max(0, 420 - res.ausencia);
         } else {
           res.trabalhados = 420;
@@ -498,6 +505,7 @@
       }
       return res;
     }
+
     function atualizarRelatorio() {
       const funcFiltro = document.getElementById('filtroFuncionario').value.trim().toUpperCase();
       const turnoFiltro = document.getElementById('filtroTurno').value;
@@ -571,16 +579,10 @@
 
       let presencas = Object.keys(mapaDiasTrabalhados).length;
 
-      let horasAbsenteismo = (totalMinutosAbsenteismo / 60).toFixed(1);
-      if (horasAbsenteismo.endsWith('.0')) horasAbsenteismo = parseInt(horasAbsenteismo);
-
-      let horasLiquidas = (totalMinutosTrabalhados / 60).toFixed(1);
-      if (horasLiquidas.endsWith('.0')) horasLiquidas = parseInt(horasLiquidas);
-
       document.getElementById('cardPresencas').innerText = presencas;
       document.getElementById('cardFaltas').innerText = faltas;
-      document.getElementById('cardAbsenteismo').innerText = horasAbsenteismo + " hrs";
-      document.getElementById('cardHoras').innerText = horasLiquidas + " hrs";
+      document.getElementById('cardAbsenteismo').innerText = formatarHorasMinutos(totalMinutosAbsenteismo);
+      document.getElementById('cardHoras').innerText = formatarHorasMinutos(totalMinutosTrabalhados);
 
       let totalInativosQtd = dadosInativosGlobal.length;
       let totalHorasInativos = dadosInativosGlobal.reduce((acc, curr) => acc + (Number(curr.horas) || 0), 0);
