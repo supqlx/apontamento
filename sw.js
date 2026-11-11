@@ -1,4 +1,4 @@
-const CACHE_NAME = 'apontamento-v1';
+const CACHE_NAME = 'apontamento-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
