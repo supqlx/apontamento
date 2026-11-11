@@ -43,33 +43,59 @@
     <div class="card card-custom d-flex flex-row justify-content-between align-items-center flex-wrap gap-3">
       <div>
         <h2 class="h4 mb-1 text-info">Gestão de Reclamações de Clientes</h2>
-        <p class="small m-0 text-white">Registo e análise de reclamações por funcionário, data e produto.</p>
+        <p class="small m-0 text-white">Registo e análise de reclamações por funcionário, data, cliente e produto.</p>
       </div>
       <div class="d-flex gap-2">
         <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="abrirModal()">➕ Nova Reclamação</button>
         <a href="relatorio.html" class="btn btn-outline-light btn-sm">⬅ Voltar aos Relatórios</a>
-         <a href="index.html" class="btn btn-outline-light btn-sm">⬅ Voltar para Apontamentos</a>
+        <a href="index.html" class="btn btn-outline-light btn-sm">⬅ Voltar para Apontamentos</a>
       </div>
     </div>
 
-    <!-- FILTROS -->
+    <!-- FILTROS COMPLETOS -->
     <div class="card card-custom">
       <div class="row g-3">
-        <div class="col-md-4">
-          <label class="form-label">Filtrar por Funcionário:</label>
-          <input type="text" id="filtroFunc" class="form-control" placeholder="Nome do funcionário..." oninput="filtrarDados()">
+        <div class="col-md-3">
+          <label class="form-label">Funcionário:</label>
+          <input type="text" id="filtroFunc" class="form-control" placeholder="Filtrar funcionário..." oninput="filtrarDados()">
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Filtrar por Produto:</label>
-          <input type="text" id="filtroProduto" class="form-control" placeholder="Nome/Código do produto..." oninput="filtrarDados()">
+        <div class="col-md-3">
+          <label class="form-label">Produto / Molde:</label>
+          <input type="text" id="filtroProduto" class="form-control" placeholder="Filtrar produto..." oninput="filtrarDados()">
         </div>
-        <div class="col-md-4 d-flex align-items-end">
-          <button class="btn btn-secondary w-100 btn-sm" onclick="limparFiltros()">🗑️ Limpar Filtros</button>
+        <div class="col-md-2">
+          <label class="form-label">Cliente:</label>
+          <input type="text" id="filtroCliente" class="form-control" placeholder="Filtrar cliente..." oninput="filtrarDados()">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Mês:</label>
+          <select id="filtroMes" class="form-select" onchange="filtrarDados()">
+            <option value="todos">Todos os Meses</option>
+            <option value="01">Janeiro</option>
+            <option value="02">Fevereiro</option>
+            <option value="03">Março</option>
+            <option value="04">Abril</option>
+            <option value="05">Maio</option>
+            <option value="06">Junho</option>
+            <option value="07">Julho</option>
+            <option value="08">Agosto</option>
+            <option value="09">Setembro</option>
+            <option value="10">Outubro</option>
+            <option value="11">Novembro</option>
+            <option value="12">Dezembro</option>
+          </select>
+        </div>
+        <div class="col-md-1">
+          <label class="form-label">Data:</label>
+          <input type="date" id="filtroData" class="form-control" onchange="filtrarDados()">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+          <button class="btn btn-secondary w-100 btn-sm py-2" onclick="limparFiltros()" title="Limpar Filtros">🗑️</button>
         </div>
       </div>
     </div>
 
-    <!-- GRÁFICOS ANALÍTICOS (COM ALTURA DINÂMICA E BARRAS HORIZONTAIS) -->
+    <!-- GRÁFICOS ANALÍTICOS (HORIZONTAIS) -->
     <div class="row g-4 mb-4">
       <div class="col-md-6">
         <div class="card card-custom">
@@ -187,8 +213,7 @@
         listaFuncionariosGeral = [...new Set([...nomesResumo, ...nomesReclamacoes])].filter(Boolean).sort();
 
         popularDatalistFuncionarios();
-        renderizarTabela(reclamacoes);
-        renderizarGraficos(reclamacoes);
+        filtrarDados();
       })
       .catch(err => console.error("Erro ao carregar dados:", err));
     }
@@ -201,6 +226,15 @@
         opt.value = nome;
         datalist.appendChild(opt);
       });
+    }
+
+    function formatarDataExibicao(dataStr) {
+      if (!dataStr) return '';
+      if (dataStr.includes('T')) {
+        let partes = dataStr.split('T')[0].split('-');
+        if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+      }
+      return dataStr;
     }
 
     function abrirModal() {
@@ -248,11 +282,31 @@
     function filtrarDados() {
       let fFunc = document.getElementById('filtroFunc').value.toUpperCase();
       let fProd = document.getElementById('filtroProduto').value.toUpperCase();
+      let fCliente = document.getElementById('filtroCliente').value.toUpperCase();
+      let fMes = document.getElementById('filtroMes').value;
+      let fDataInput = document.getElementById('filtroData').value;
+
+      let fDataFormatada = "";
+      if (fDataInput) {
+        let p = fDataInput.split('-');
+        fDataFormatada = `${p[2]}/${p[1]}/${p[0]}`;
+      }
 
       let filtrados = reclamacoesGlobais.filter(item => {
-        let matchF = !fFunc || (item.funcionario && item.funcionario.includes(fFunc));
-        let matchP = !fProd || (item.produto && item.produto.includes(fProd));
-        return matchF && matchP;
+        let matchFunc = !fFunc || (item.funcionario && item.funcionario.toUpperCase().includes(fFunc));
+        let matchProd = !fProd || (item.produto && item.produto.toUpperCase().includes(fProd));
+        let matchCliente = !fCliente || (item.cliente && item.cliente.toUpperCase().includes(fCliente));
+
+        let dataLimpa = formatarDataExibicao(item.data);
+        let matchData = !fDataFormatada || dataLimpa === fDataFormatada;
+
+        let matchMes = true;
+        if (fMes !== "todos" && dataLimpa) {
+          let mesItem = dataLimpa.split('/')[1];
+          matchMes = (mesItem === fMes);
+        }
+
+        return matchFunc && matchProd && matchCliente && matchData && matchMes;
       });
 
       renderizarTabela(filtrados);
@@ -262,21 +316,23 @@
     function limparFiltros() {
       document.getElementById('filtroFunc').value = "";
       document.getElementById('filtroProduto').value = "";
-      renderizarTabela(reclamacoesGlobais);
-      renderizarGraficos(reclamacoesGlobais);
+      document.getElementById('filtroCliente').value = "";
+      document.getElementById('filtroMes').value = "todos";
+      document.getElementById('filtroData').value = "";
+      filtrarDados();
     }
 
     function renderizarTabela(dados) {
       let tbody = document.getElementById('tabelaReclamacoes');
       tbody.innerHTML = '';
       if (!dados || dados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Nenhuma reclamação registada.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Nenhuma reclamação encontrada com os filtros atuais.</td></tr>`;
         return;
       }
       dados.forEach(item => {
         tbody.innerHTML += `
           <tr>
-            <td class="text-center">${item.data}</td>
+            <td class="text-center">${formatarDataExibicao(item.data)}</td>
             <td class="fw-bold text-info">${item.funcionario}</td>
             <td>${item.produto}</td>
             <td>${item.cliente || '-'}</td>
@@ -306,7 +362,6 @@
       let labelsProd = Object.keys(contProd);
       let valoresProd = Object.values(contProd);
 
-      // Altura dinâmica para acomodar perfeitamente os nomes em lista
       let alturaFunc = Math.max(300, labelsFunc.length * 35);
       let alturaProd = Math.max(300, labelsProd.length * 35);
       document.getElementById('containerGraficoFunc').style.height = alturaFunc + 'px';
@@ -315,7 +370,6 @@
       if (chartFunc) chartFunc.destroy();
       if (chartProd) chartProd.destroy();
 
-      // GRÁFICO HORIZONTAL DE FUNCIONÁRIO (EXATAMENTE IGUAL AOS RELATÓRIOS)
       chartFunc = new Chart(document.getElementById('graficoFuncionario').getContext('2d'), {
         type: 'bar',
         data: {
@@ -334,7 +388,6 @@
         }
       });
 
-      // GRÁFICO HORIZONTAL DE PRODUTO
       chartProd = new Chart(document.getElementById('graficoProduto').getContext('2d'), {
         type: 'bar',
         data: {
