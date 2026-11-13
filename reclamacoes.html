@@ -46,7 +46,7 @@
       box-shadow: 0 5px 15px rgba(0,0,0,0.5);
     }
 
-    /* ESTILOS EXCLUSIVOS PARA IMPRESSÃO / RELATÓRIO PDF OFICIAL */
+    /* ESTILOS DE IMPRESSÃO / PDF OFICIAL */
     #cabecalhoImpressao, #rodapeImpressao { display: none; }
 
     @media print {
@@ -72,11 +72,11 @@
 <body>
 
   <div class="container-fluid">
-    <!-- CABEÇALHO EXCLUSIVO DE IMPRESSÃO / AUDITORIA -->
+    <!-- CABEÇALHO DE IMPRESSÃO -->
     <div id="cabecalhoImpressao">
       <div class="d-flex justify-content-between align-items-center">
         <div>
-          <h3 class="m-0 fw-bold">RELATÓRIO OFICIAL DE NÃO CONFORMIDADES E RECLAMAÇÕES</h3>
+          <h3 class="m-0 fw-bold">RELATÓRIO DE RECLAMAÇÕES DE CLIENTES</h3>
           <p class="m-0 small">Controlo de Qualidade — Injeção de Termoplásticos</p>
         </div>
         <div class="text-end small">
@@ -86,11 +86,11 @@
       </div>
     </div>
 
-    <!-- CABEÇALHO INTERATIVO (OCULTO NA IMPRESSÃO) -->
+    <!-- CABEÇALHO INTERATIVO -->
     <div class="card card-custom d-flex flex-row justify-content-between align-items-center flex-wrap gap-3 no-print">
       <div>
         <h2 class="h4 mb-1 text-info">Gestão de Reclamações de Clientes</h2>
-        <p class="small m-0 text-white">Indicadores de qualidade, severidade de defeitos e exportação gerencial.</p>
+        <p class="small m-0 text-white">Registo, análise estatística e relatórios gerenciais.</p>
       </div>
       <div class="d-flex flex-wrap gap-2">
         <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="abrirModalNova()">➕ Nova Reclamação</button>
@@ -101,18 +101,18 @@
       </div>
     </div>
 
-    <!-- CARTÕES DE INDICADORES (KPIs) -->
+    <!-- CARTÕES DE KPIs -->
     <div class="row g-3 mb-4">
       <div class="col-md-3 col-sm-6">
         <div class="kpi-card border-kpi-info">
           <span class="kpi-title text-info">Total de Reclamações</span>
           <span class="kpi-value" id="kpiTotal">0</span>
-          <span class="kpi-sub" id="kpiSubCriticos">0 ocorrências críticas</span>
+          <span class="kpi-sub" id="kpiSubPeriodo">No período selecionado</span>
         </div>
       </div>
       <div class="col-md-3 col-sm-6">
         <div class="kpi-card border-kpi-danger">
-          <span class="kpi-title text-danger">Principal Defeito (Causa-Raiz)</span>
+          <span class="kpi-title text-danger">Principal Motivo</span>
           <span class="kpi-value" id="kpiPrincipalDefeito">-</span>
           <span class="kpi-sub" id="kpiSubDefeito">Sem registos</span>
         </div>
@@ -133,7 +133,7 @@
       </div>
     </div>
 
-    <!-- FILTROS COMPLETOS + SEVERIDADE (OCULTO NA IMPRESSÃO) -->
+    <!-- FILTROS -->
     <div class="card card-custom no-print">
       <div class="row g-2">
         <div class="col-md-2">
@@ -149,12 +149,18 @@
           <input type="text" id="filtroCliente" class="form-control" placeholder="Cliente..." oninput="filtrarDados()">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Severidade:</label>
-          <select id="filtroSeveridade" class="form-select" onchange="filtrarDados()">
-            <option value="todas">Todas as Severidades</option>
-            <option value="alta">🔴 Alta (Crítico)</option>
-            <option value="media">🟠 Média (Atenção)</option>
-            <option value="baixa">🔵 Leve (Acabamento)</option>
+          <label class="form-label">Motivo do Defeito:</label>
+          <select id="filtroMotivo" class="form-select" onchange="filtrarDados()">
+            <option value="todos">Todos os Motivos</option>
+            <option value="Rebarba">Rebarba</option>
+            <option value="Bolhas de ar">Bolhas de ar</option>
+            <option value="Falha de injeção">Falha de injeção</option>
+            <option value="Deformação">Deformação</option>
+            <option value="Chupagem">Chupagem</option>
+            <option value="Fora de tonalidade">Fora de tonalidade</option>
+            <option value="Pinta">Pinta</option>
+            <option value="Sujeira">Sujeira</option>
+            <option value="Outros">Outros</option>
           </select>
         </div>
         <div class="col-md-2">
@@ -185,7 +191,7 @@
       </div>
     </div>
 
-    <!-- GRÁFICOS ANALÍTICOS (OCULTOS NA IMPRESSÃO PARA ECONOMIZAR TINTA E FOCAR NA TABELA) -->
+    <!-- GRÁFICOS ANALÍTICOS -->
     <div class="row g-4 mb-4 no-print">
       <div class="col-md-4">
         <div class="card card-custom">
@@ -205,7 +211,7 @@
       </div>
       <div class="col-md-4">
         <div class="card card-custom">
-          <h5 class="text-danger mb-3">🔍 Motivos de Defeitos (Causa-Raiz)</h5>
+          <h5 class="text-danger mb-3">🔍 Distribuição por Motivos</h5>
           <div style="position: relative; height: 320px;">
             <canvas id="graficoMotivos"></canvas>
           </div>
@@ -213,7 +219,7 @@
       </div>
     </div>
 
-    <!-- TABELA DETALHADA DE RECLAMAÇÕES -->
+    <!-- TABELA DETALHADA -->
     <div class="card card-custom">
       <h5 class="text-info mb-3 no-print">📋 Registo Detalhado de Reclamações</h5>
       <div class="table-responsive">
@@ -224,7 +230,7 @@
               <th>Funcionário</th>
               <th>Produto</th>
               <th>Cliente</th>
-              <th class="text-center">Motivo (Defeito)</th>
+              <th class="text-center">Motivo da Reclamação</th>
               <th>Observação</th>
               <th class="text-center no-print">Ações</th>
             </tr>
@@ -236,15 +242,15 @@
       </div>
     </div>
 
-    <!-- RODAPÉ DE ASSINATURAS EXCLUSIVO PARA IMPRESSÃO -->
+    <!-- RODAPÉ DE ASSINATURA -->
     <div id="rodapeImpressao">
       <div class="assinatura-box">Responsável pela Qualidade</div>
-      <div class="assinatura-box">Supervisão de Produção / Injeção</div>
+      <div class="assinatura-box">Supervisão de Produção</div>
       <div class="assinatura-box">Gerência Industrial</div>
     </div>
   </div>
 
-  <!-- POP-UP MODAL DE REGISTO / EDIÇÃO -->
+  <!-- MODAL DE CADASTRO / EDIÇÃO -->
   <div id="modalReclamacao" class="modal-custom no-print">
     <div class="modal-content-custom">
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -274,14 +280,14 @@
         <div class="mb-3">
           <label class="form-label">Motivo da Reclamação:</label>
           <select id="cadMotivo" class="form-select">
-            <option value="Rebarba">Rebarba (Leve)</option>
-            <option value="Bolhas de ar">Bolhas de ar (Média)</option>
-            <option value="Falha de injeção">Falha de injeção (Alta)</option>
-            <option value="Deformação">Deformação (Alta)</option>
-            <option value="Chupagem">Chupagem (Média)</option>
-            <option value="Fora de tonalidade">Fora de tonalidade (Alta)</option>
-            <option value="Pinta">Pinta (Média)</option>
-            <option value="Sujeira">Sujeira (Leve)</option>
+            <option value="Rebarba">Rebarba</option>
+            <option value="Bolhas de ar">Bolhas de ar</option>
+            <option value="Falha de injeção">Falha de injeção</option>
+            <option value="Deformação">Deformação</option>
+            <option value="Chupagem">Chupagem</option>
+            <option value="Fora de tonalidade">Fora de tonalidade</option>
+            <option value="Pinta">Pinta</option>
+            <option value="Sujeira">Sujeira</option>
             <option value="Trinca/Quebra">Trinca/Quebra</option>
             <option value="Outros">Outros</option>
           </select>
@@ -346,27 +352,6 @@
         if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
       }
       return dataStr;
-    }
-
-    // CLASSIFICAÇÃO CENTRALIZADA DE SEVERIDADE
-    function classificarSeveridade(motivo) {
-      if (!motivo) return "baixa";
-      let m = motivo.toLowerCase();
-      if (m.includes("falha") || m.includes("deforma") || m.includes("tonalidade")) return "alta";
-      if (m.includes("chupagem") || m.includes("bolha") || m.includes("pinta")) return "media";
-      return "baixa";
-    }
-
-    function obterBadgeSeveridade(motivo) {
-      let sev = classificarSeveridade(motivo);
-      let texto = motivo || "Outros";
-      if (sev === "alta") {
-        return `<span class="badge bg-danger px-2 py-1" title="Severidade Alta (Crítico)">🔴 ${texto}</span>`;
-      }
-      if (sev === "media") {
-        return `<span class="badge bg-warning text-dark px-2 py-1" title="Severidade Média">🟠 ${texto}</span>`;
-      }
-      return `<span class="badge bg-info text-dark px-2 py-1" title="Severidade Leve">🔵 ${texto}</span>`;
     }
 
     function abrirModalNova() {
@@ -456,7 +441,7 @@
       let fFunc = document.getElementById('filtroFunc').value.toUpperCase();
       let fProd = document.getElementById('filtroProduto').value.toUpperCase();
       let fCliente = document.getElementById('filtroCliente').value.toUpperCase();
-      let fSev = document.getElementById('filtroSeveridade').value;
+      let fMotivo = document.getElementById('filtroMotivo').value;
       let fMes = document.getElementById('filtroMes').value;
       let fDataInput = document.getElementById('filtroData').value;
 
@@ -470,7 +455,7 @@
         let matchFunc = !fFunc || (item.funcionario && item.funcionario.toUpperCase().includes(fFunc));
         let matchProd = !fProd || (item.produto && item.produto.toUpperCase().includes(fProd));
         let matchCliente = !fCliente || (item.cliente && item.cliente.toUpperCase().includes(fCliente));
-        let matchSev = (fSev === "todas") || (classificarSeveridade(item.motivo) === fSev);
+        let matchMotivo = (fMotivo === "todos") || (item.motivo === fMotivo);
 
         let dataLimpa = formatarDataExibicao(item.data);
         let matchData = !fDataFormatada || dataLimpa === fDataFormatada;
@@ -481,7 +466,7 @@
           matchMes = (mesItem === fMes);
         }
 
-        return matchFunc && matchProd && matchCliente && matchSev && matchData && matchMes;
+        return matchFunc && matchProd && matchCliente && matchMotivo && matchData && matchMes;
       });
 
       atualizarKPIs(dadosFiltradosAtuais);
@@ -493,19 +478,18 @@
       document.getElementById('filtroFunc').value = "";
       document.getElementById('filtroProduto').value = "";
       document.getElementById('filtroCliente').value = "";
-      document.getElementById('filtroSeveridade').value = "todas";
+      document.getElementById('filtroMotivo').value = "todos";
       document.getElementById('filtroMes').value = "todos";
       document.getElementById('filtroData').value = "";
       filtrarDados();
     }
 
-    // CALCULA E ATUALIZA OS CARTÕES DE KPIs NO TOPO
     function atualizarKPIs(dados) {
       let total = dados.length;
       document.getElementById('kpiTotal').innerText = total;
 
       if (total === 0) {
-        document.getElementById('kpiSubCriticos').innerText = "0 ocorrências críticas";
+        document.getElementById('kpiSubPeriodo').innerText = "Nenhum registo encontrado";
         document.getElementById('kpiPrincipalDefeito').innerText = "-";
         document.getElementById('kpiSubDefeito').innerText = "Sem registos";
         document.getElementById('kpiPrincipalProduto').innerText = "-";
@@ -515,14 +499,13 @@
         return;
       }
 
-      let criticos = 0;
+      document.getElementById('kpiSubPeriodo').innerText = "No período selecionado";
+
       let contDefeito = {};
       let contProduto = {};
       let contCliente = {};
 
       dados.forEach(item => {
-        if (classificarSeveridade(item.motivo) === "alta") criticos++;
-        
         let m = item.motivo || "Outros";
         let p = item.produto || "N/D";
         let c = item.cliente || "Não informado";
@@ -534,8 +517,6 @@
         }
       });
 
-      document.getElementById('kpiSubCriticos').innerText = `${criticos} ocorrência(s) crítica(s)`;
-
       const obterLider = (mapa) => {
         let chaves = Object.keys(mapa);
         if (chaves.length === 0) return { nome: "-", qtd: 0 };
@@ -546,7 +527,7 @@
       let topDefeito = obterLider(contDefeito);
       let percDefeito = Math.round((topDefeito.qtd / total) * 100);
       document.getElementById('kpiPrincipalDefeito').innerText = topDefeito.nome;
-      document.getElementById('kpiSubDefeito').innerText = `${topDefeito.qtd} registo(s) (${percDefeito}% do total)`;
+      document.getElementById('kpiSubDefeito').innerText = `${topDefeito.qtd} ocorrência(s) (${percDefeito}%)`;
 
       let topProduto = obterLider(contProduto);
       document.getElementById('kpiPrincipalProduto').innerText = topProduto.nome;
@@ -554,17 +535,16 @@
 
       let topCliente = obterLider(contCliente);
       document.getElementById('kpiPrincipalCliente').innerText = topCliente.nome;
-      document.getElementById('kpiSubCliente').innerText = topCliente.qtd > 0 ? `${topCliente.qtd} ocorrência(s)` : "Nenhum cliente especificado";
+      document.getElementById('kpiSubCliente').innerText = topCliente.qtd > 0 ? `${topCliente.qtd} ocorrência(s)` : "Não informado";
     }
 
-    // EXPORTAR OS DADOS FILTRADOS PARA EXCEL (.CSV COM SUPORTE A ACENTOS UTF-8)
     function exportarCSV() {
       if (!dadosFiltradosAtuais || dadosFiltradosAtuais.length === 0) {
         alert("Não existem registos filtrados para exportar.");
         return;
       }
 
-      let csv = "\uFEFFData;Funcionario;Produto;Cliente;Motivo;Severidade;Observacao\n";
+      let csv = "\uFEFFData;Funcionario;Produto;Cliente;Motivo;Observacao\n";
 
       dadosFiltradosAtuais.forEach(item => {
         let data = formatarDataExibicao(item.data);
@@ -572,10 +552,9 @@
         let prod = (item.produto || "").replace(/;/g, ",");
         let cli = (item.cliente || "-").replace(/;/g, ",");
         let mot = (item.motivo || "").replace(/;/g, ",");
-        let sev = classificarSeveridade(item.motivo).toUpperCase();
         let obs = (item.obs || "-").replace(/;/g, ",").replace(/\n/g, " ");
 
-        csv += `${data};${func};${prod};${cli};${mot};${sev};${obs}\n`;
+        csv += `${data};${func};${prod};${cli};${mot};${obs}\n`;
       });
 
       let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -590,7 +569,6 @@
       document.body.removeChild(link);
     }
 
-    // PREPARAR CABEÇALHO E ACIONAR IMPRESSÃO LIMPA EM PDF / A4 PAISAGEM
     function imprimirRelatorio() {
       let agora = new Date();
       document.getElementById('dataEmissaoPrint').innerText = agora.toLocaleDateString('pt-BR') + " às " + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -599,13 +577,13 @@
       let fFunc = document.getElementById('filtroFunc').value;
       let fProd = document.getElementById('filtroProduto').value;
       let fCli = document.getElementById('filtroCliente').value;
-      let fSev = document.getElementById('filtroSeveridade');
+      let fMotivo = document.getElementById('filtroMotivo');
       let fMes = document.getElementById('filtroMes');
 
       if (fFunc) filtrosAtivos.push(`Func: ${fFunc}`);
       if (fProd) filtrosAtivos.push(`Prod: ${fProd}`);
       if (fCli) filtrosAtivos.push(`Cliente: ${fCli}`);
-      if (fSev.value !== "todas") filtrosAtivos.push(`Sev: ${fSev.options[fSev.selectedIndex].text}`);
+      if (fMotivo.value !== "todos") filtrosAtivos.push(`Motivo: ${fMotivo.value}`);
       if (fMes.value !== "todos") filtrosAtivos.push(`Mês: ${fMes.options[fMes.selectedIndex].text}`);
 
       document.getElementById('resumoFiltroPrint').innerText = filtrosAtivos.length > 0 ? filtrosAtivos.join(" | ") : "Todos os registos";
@@ -621,15 +599,13 @@
         return;
       }
       dados.forEach(item => {
-        let badgeMotivo = obterBadgeSeveridade(item.motivo);
-
         tbody.innerHTML += `
           <tr>
             <td class="text-center">${formatarDataExibicao(item.data)}</td>
             <td class="fw-bold text-info">${item.funcionario}</td>
             <td>${item.produto}</td>
             <td>${item.cliente || '-'}</td>
-            <td class="text-center">${badgeMotivo}</td>
+            <td class="text-center"><span class="badge bg-danger px-2 py-1">${item.motivo || 'Outros'}</span></td>
             <td>${item.obs ? `<span class="text-white">${item.obs}</span>` : '<span class="text-muted">Sem detalhes</span>'}</td>
             <td class="text-center no-print">
               <button class="btn btn-outline-warning btn-sm py-0 px-2 me-1" onclick="abrirModalEdicao(${item.indexOriginal})" title="Editar Reclamação">✏️ Editar</button>
