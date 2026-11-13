@@ -3,12 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Reclamações de Clientes - Dashboard</title>
+  <title>Reclamações de Clientes - Dashboard de Qualidade</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { background-color: #0b132b; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 20px; }
     .card-custom { background-color: #1c2541; border: none; border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-bottom: 20px; }
+    
+    /* Cartões de KPIs */
+    .kpi-card { background-color: #1c2541; border-radius: 12px; padding: 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); height: 100%; display: flex; flex-direction: column; justify-content: center; }
+    .kpi-title { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+    .kpi-value { font-size: 1.65rem; font-weight: bold; color: #fff; line-height: 1.2; }
+    .kpi-sub { font-size: 0.75rem; color: #a0aec0; margin-top: 4px; }
+    .border-kpi-info { border-left: 5px solid #4cc9f0; }
+    .border-kpi-danger { border-left: 5px solid #f72585; }
+    .border-kpi-warning { border-left: 5px solid #ff9f1c; }
+    .border-kpi-success { border-left: 5px solid #2ec4b6; }
+
     .form-control, .form-select { background-color: #0b132b; color: #fff; border: 1px solid #2d3e6b; font-size: 0.85rem; }
     .form-control:focus, .form-select:focus { background-color: #0b132b; color: #fff; border-color: #4cc9f0; box-shadow: none; }
     label, .form-label { color: #4cc9f0 !important; font-size: 0.8rem; font-weight: bold; }
@@ -34,38 +45,117 @@
       max-width: 500px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.5);
     }
+
+    /* ESTILOS EXCLUSIVOS PARA IMPRESSÃO / RELATÓRIO PDF OFICIAL */
+    #cabecalhoImpressao, #rodapeImpressao { display: none; }
+
+    @media print {
+      @page { size: A4 landscape; margin: 12mm; }
+      body { background-color: #fff !important; color: #000 !important; padding: 0 !important; font-size: 10pt; }
+      .no-print { display: none !important; }
+      #cabecalhoImpressao { display: block !important; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+      #rodapeImpressao { display: flex !important; justify-content: space-between; margin-top: 40px; padding-top: 10px; }
+      .assinatura-box { border-top: 1px solid #000; width: 30%; text-align: center; padding-top: 5px; font-size: 9pt; }
+      
+      .card-custom, .kpi-card { background-color: #fff !important; box-shadow: none !important; border: 1px solid #ccc !important; padding: 10px !important; margin-bottom: 12px !important; color: #000 !important; }
+      .kpi-value { color: #000 !important; font-size: 1.3rem !important; }
+      .kpi-title, .kpi-sub { color: #333 !important; }
+      
+      .table-dark-custom { color: #000 !important; border-collapse: collapse !important; width: 100% !important; }
+      .table-dark-custom th { background-color: #e9ecef !important; color: #000 !important; border: 1px solid #999 !important; padding: 6px !important; }
+      .table-dark-custom td { background-color: #fff !important; color: #000 !important; border: 1px solid #999 !important; padding: 6px !important; }
+      .badge { border: 1px solid #000 !important; color: #000 !important; background-color: transparent !important; font-weight: bold; }
+      .text-info, .text-white { color: #000 !important; }
+    }
   </style>
 </head>
 <body>
 
   <div class="container-fluid">
-    <!-- CABEÇALHO -->
-    <div class="card card-custom d-flex flex-row justify-content-between align-items-center flex-wrap gap-3">
-      <div>
-        <h2 class="h4 mb-1 text-info">Gestão de Reclamações de Clientes</h2>
-        <p class="small m-0 text-white">Registo, análise de severidade e causas-raiz por funcionário, produto e motivo.</p>
-      </div>
-      <div class="d-flex gap-2">
-        <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="abrirModalNova()">➕ Nova Reclamação</button>
-        <a href="relatorio.html" class="btn btn-outline-light btn-sm">⬅ Voltar aos Relatórios</a>
-        <a href="index.html" class="btn btn-outline-light btn-sm">⬅ Voltar para Apontamentos</a>
+    <!-- CABEÇALHO EXCLUSIVO DE IMPRESSÃO / AUDITORIA -->
+    <div id="cabecalhoImpressao">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h3 class="m-0 fw-bold">RELATÓRIO OFICIAL DE NÃO CONFORMIDADES E RECLAMAÇÕES</h3>
+          <p class="m-0 small">Controlo de Qualidade — Injeção de Termoplásticos</p>
+        </div>
+        <div class="text-end small">
+          <strong>Data de Emissão:</strong> <span id="dataEmissaoPrint"></span><br>
+          <strong>Filtro Aplicado:</strong> <span id="resumoFiltroPrint">Geral</span>
+        </div>
       </div>
     </div>
 
-    <!-- FILTROS COMPLETOS -->
-    <div class="card card-custom">
-      <div class="row g-3">
-        <div class="col-md-3">
-          <label class="form-label">Funcionário:</label>
-          <input type="text" id="filtroFunc" class="form-control" placeholder="Filtrar funcionário..." oninput="filtrarDados()">
+    <!-- CABEÇALHO INTERATIVO (OCULTO NA IMPRESSÃO) -->
+    <div class="card card-custom d-flex flex-row justify-content-between align-items-center flex-wrap gap-3 no-print">
+      <div>
+        <h2 class="h4 mb-1 text-info">Gestão de Reclamações de Clientes</h2>
+        <p class="small m-0 text-white">Indicadores de qualidade, severidade de defeitos e exportação gerencial.</p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-warning btn-sm fw-bold" onclick="abrirModalNova()">➕ Nova Reclamação</button>
+        <button type="button" class="btn btn-success btn-sm fw-bold" onclick="exportarCSV()">📤 Exportar Excel (.csv)</button>
+        <button type="button" class="btn btn-info btn-sm fw-bold" onclick="imprimirRelatorio()">🖨️ Imprimir / PDF</button>
+        <a href="relatorio.html" class="btn btn-outline-light btn-sm">⬅ Relatórios</a>
+        <a href="index.html" class="btn btn-outline-light btn-sm">⬅ Apontamentos</a>
+      </div>
+    </div>
+
+    <!-- CARTÕES DE INDICADORES (KPIs) -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card border-kpi-info">
+          <span class="kpi-title text-info">Total de Reclamações</span>
+          <span class="kpi-value" id="kpiTotal">0</span>
+          <span class="kpi-sub" id="kpiSubCriticos">0 ocorrências críticas</span>
         </div>
-        <div class="col-md-3">
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card border-kpi-danger">
+          <span class="kpi-title text-danger">Principal Defeito (Causa-Raiz)</span>
+          <span class="kpi-value" id="kpiPrincipalDefeito">-</span>
+          <span class="kpi-sub" id="kpiSubDefeito">Sem registos</span>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card border-kpi-warning">
+          <span class="kpi-title text-warning">Produto Mais Reclamado</span>
+          <span class="kpi-value" id="kpiPrincipalProduto">-</span>
+          <span class="kpi-sub" id="kpiSubProduto">Sem registos</span>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="kpi-card border-kpi-success">
+          <span class="kpi-title" style="color: #2ec4b6;">Cliente Mais Afetado</span>
+          <span class="kpi-value" id="kpiPrincipalCliente">-</span>
+          <span class="kpi-sub" id="kpiSubCliente">Sem registos</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTROS COMPLETOS + SEVERIDADE (OCULTO NA IMPRESSÃO) -->
+    <div class="card card-custom no-print">
+      <div class="row g-2">
+        <div class="col-md-2">
+          <label class="form-label">Funcionário:</label>
+          <input type="text" id="filtroFunc" class="form-control" placeholder="Nome..." oninput="filtrarDados()">
+        </div>
+        <div class="col-md-2">
           <label class="form-label">Produto / Molde:</label>
-          <input type="text" id="filtroProduto" class="form-control" placeholder="Filtrar produto..." oninput="filtrarDados()">
+          <input type="text" id="filtroProduto" class="form-control" placeholder="Produto..." oninput="filtrarDados()">
         </div>
         <div class="col-md-2">
           <label class="form-label">Cliente:</label>
-          <input type="text" id="filtroCliente" class="form-control" placeholder="Filtrar cliente..." oninput="filtrarDados()">
+          <input type="text" id="filtroCliente" class="form-control" placeholder="Cliente..." oninput="filtrarDados()">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Severidade:</label>
+          <select id="filtroSeveridade" class="form-select" onchange="filtrarDados()">
+            <option value="todas">Todas as Severidades</option>
+            <option value="alta">🔴 Alta (Crítico)</option>
+            <option value="media">🟠 Média (Atenção)</option>
+            <option value="baixa">🔵 Leve (Acabamento)</option>
+          </select>
         </div>
         <div class="col-md-2">
           <label class="form-label">Mês:</label>
@@ -95,8 +185,8 @@
       </div>
     </div>
 
-    <!-- GRÁFICOS ANALÍTICOS (3 PAINÉIS: FUNCIONÁRIO, PRODUTO E MOTIVOS) -->
-    <div class="row g-4 mb-4">
+    <!-- GRÁFICOS ANALÍTICOS (OCULTOS NA IMPRESSÃO PARA ECONOMIZAR TINTA E FOCAR NA TABELA) -->
+    <div class="row g-4 mb-4 no-print">
       <div class="col-md-4">
         <div class="card card-custom">
           <h5 class="text-info mb-3">📊 Reclamações por Funcionário</h5>
@@ -123,9 +213,9 @@
       </div>
     </div>
 
-    <!-- TABELA DETALHADA DE RECLAMAÇÕES COM EDICÃO/EXCLUSÃO E ALERTAS DE SEVERIDADE -->
+    <!-- TABELA DETALHADA DE RECLAMAÇÕES -->
     <div class="card card-custom">
-      <h5 class="text-info mb-3">📋 Registo Detalhado de Reclamações</h5>
+      <h5 class="text-info mb-3 no-print">📋 Registo Detalhado de Reclamações</h5>
       <div class="table-responsive">
         <table class="table table-dark-custom table-hover">
           <thead>
@@ -136,7 +226,7 @@
               <th>Cliente</th>
               <th class="text-center">Motivo (Defeito)</th>
               <th>Observação</th>
-              <th class="text-center">Ações</th>
+              <th class="text-center no-print">Ações</th>
             </tr>
           </thead>
           <tbody id="tabelaReclamacoes">
@@ -145,10 +235,17 @@
         </table>
       </div>
     </div>
+
+    <!-- RODAPÉ DE ASSINATURAS EXCLUSIVO PARA IMPRESSÃO -->
+    <div id="rodapeImpressao">
+      <div class="assinatura-box">Responsável pela Qualidade</div>
+      <div class="assinatura-box">Supervisão de Produção / Injeção</div>
+      <div class="assinatura-box">Gerência Industrial</div>
+    </div>
   </div>
 
   <!-- POP-UP MODAL DE REGISTO / EDIÇÃO -->
-  <div id="modalReclamacao" class="modal-custom">
+  <div id="modalReclamacao" class="modal-custom no-print">
     <div class="modal-content-custom">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 id="modalTitulo" class="text-info m-0">Registar Reclamação</h4>
@@ -159,7 +256,7 @@
         
         <div class="mb-3">
           <label class="form-label">Data (DD/MM/AAAA):</label>
-          <input type="text" id="cadData" class="form-control" required placeholder="Ex: 11/11/2026">
+          <input type="text" id="cadData" class="form-control" required placeholder="Ex: 13/11/2026">
         </div>
         <div class="mb-3">
           <label class="form-label">Funcionário Responsável:</label>
@@ -177,15 +274,14 @@
         <div class="mb-3">
           <label class="form-label">Motivo da Reclamação:</label>
           <select id="cadMotivo" class="form-select">
-            <option value="Rebarba">Rebarba</option>
-            <option value="Bolhas de ar">Bolhas</option>
-            <option value="Falha de injeção">Falha de injeção</option>
-            <option value="Deformação">Deformação</option>
-            <option value="Chupagem">Chupagem</option>
-            <option value="Fora de tonalidade">Fora de tonalidade</option>
-            <option value="Pinta">Pinta</option>
-            <option value="Lado misturado">Lado Misturado</option>
-            <option value="Sujeira">Sujeira</option>
+            <option value="Rebarba">Rebarba (Leve)</option>
+            <option value="Bolhas de ar">Bolhas de ar (Média)</option>
+            <option value="Falha de injeção">Falha de injeção (Alta)</option>
+            <option value="Deformação">Deformação (Alta)</option>
+            <option value="Chupagem">Chupagem (Média)</option>
+            <option value="Fora de tonalidade">Fora de tonalidade (Alta)</option>
+            <option value="Pinta">Pinta (Média)</option>
+            <option value="Sujeira">Sujeira (Leve)</option>
             <option value="Outros">Outros</option>
           </select>
         </div>
@@ -204,6 +300,7 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbyt0-k9jkWcIHe4nQcgjyWe_PADniW1q1SLLB3gdPbHKcXIjllPyZVpRl7C-mQ1cp32_w/exec";
     let reclamacoesGlobais = [];
+    let dadosFiltradosAtuais = [];
     let listaFuncionariosGeral = [];
     let chartFunc = null;
     let chartProd = null;
@@ -248,6 +345,27 @@
         if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
       }
       return dataStr;
+    }
+
+    // CLASSIFICAÇÃO CENTRALIZADA DE SEVERIDADE
+    function classificarSeveridade(motivo) {
+      if (!motivo) return "baixa";
+      let m = motivo.toLowerCase();
+      if (m.includes("falha") || m.includes("deforma") || m.includes("tonalidade")) return "alta";
+      if (m.includes("chupagem") || m.includes("bolha") || m.includes("pinta")) return "media";
+      return "baixa";
+    }
+
+    function obterBadgeSeveridade(motivo) {
+      let sev = classificarSeveridade(motivo);
+      let texto = motivo || "Outros";
+      if (sev === "alta") {
+        return `<span class="badge bg-danger px-2 py-1" title="Severidade Alta (Crítico)">🔴 ${texto}</span>`;
+      }
+      if (sev === "media") {
+        return `<span class="badge bg-warning text-dark px-2 py-1" title="Severidade Média">🟠 ${texto}</span>`;
+      }
+      return `<span class="badge bg-info text-dark px-2 py-1" title="Severidade Leve">🔵 ${texto}</span>`;
     }
 
     function abrirModalNova() {
@@ -337,6 +455,7 @@
       let fFunc = document.getElementById('filtroFunc').value.toUpperCase();
       let fProd = document.getElementById('filtroProduto').value.toUpperCase();
       let fCliente = document.getElementById('filtroCliente').value.toUpperCase();
+      let fSev = document.getElementById('filtroSeveridade').value;
       let fMes = document.getElementById('filtroMes').value;
       let fDataInput = document.getElementById('filtroData').value;
 
@@ -346,10 +465,11 @@
         fDataFormatada = `${p[2]}/${p[1]}/${p[0]}`;
       }
 
-      let filtrados = reclamacoesGlobais.filter(item => {
+      dadosFiltradosAtuais = reclamacoesGlobais.filter(item => {
         let matchFunc = !fFunc || (item.funcionario && item.funcionario.toUpperCase().includes(fFunc));
         let matchProd = !fProd || (item.produto && item.produto.toUpperCase().includes(fProd));
         let matchCliente = !fCliente || (item.cliente && item.cliente.toUpperCase().includes(fCliente));
+        let matchSev = (fSev === "todas") || (classificarSeveridade(item.motivo) === fSev);
 
         let dataLimpa = formatarDataExibicao(item.data);
         let matchData = !fDataFormatada || dataLimpa === fDataFormatada;
@@ -360,37 +480,136 @@
           matchMes = (mesItem === fMes);
         }
 
-        return matchFunc && matchProd && matchCliente && matchData && matchMes;
+        return matchFunc && matchProd && matchCliente && matchSev && matchData && matchMes;
       });
 
-      renderizarTabela(filtrados);
-      renderizarGraficos(filtrados);
+      atualizarKPIs(dadosFiltradosAtuais);
+      renderizarTabela(dadosFiltradosAtuais);
+      renderizarGraficos(dadosFiltradosAtuais);
     }
 
     function limparFiltros() {
       document.getElementById('filtroFunc').value = "";
       document.getElementById('filtroProduto').value = "";
       document.getElementById('filtroCliente').value = "";
+      document.getElementById('filtroSeveridade').value = "todas";
       document.getElementById('filtroMes').value = "todos";
       document.getElementById('filtroData').value = "";
       filtrarDados();
     }
 
-    // RETORNA O BADGE COLORIDO CONFORME A SEVERIDADE DO DEFEITO
-    function obterBadgeSeveridade(motivo) {
-      if (!motivo) return `<span class="badge bg-secondary">Outros</span>`;
-      let m = motivo.toLowerCase();
+    // CALCULA E ATUALIZA OS CARTÕES DE KPIs NO TOPO
+    function atualizarKPIs(dados) {
+      let total = dados.length;
+      document.getElementById('kpiTotal').innerText = total;
+
+      if (total === 0) {
+        document.getElementById('kpiSubCriticos').innerText = "0 ocorrências críticas";
+        document.getElementById('kpiPrincipalDefeito').innerText = "-";
+        document.getElementById('kpiSubDefeito').innerText = "Sem registos";
+        document.getElementById('kpiPrincipalProduto').innerText = "-";
+        document.getElementById('kpiSubProduto').innerText = "Sem registos";
+        document.getElementById('kpiPrincipalCliente').innerText = "-";
+        document.getElementById('kpiSubCliente').innerText = "Sem registos";
+        return;
+      }
+
+      let criticos = 0;
+      let contDefeito = {};
+      let contProduto = {};
+      let contCliente = {};
+
+      dados.forEach(item => {
+        if (classificarSeveridade(item.motivo) === "alta") criticos++;
+        
+        let m = item.motivo || "Outros";
+        let p = item.produto || "N/D";
+        let c = item.cliente || "Não informado";
+
+        contDefeito[m] = (contDefeito[m] || 0) + 1;
+        contProduto[p] = (contProduto[p] || 0) + 1;
+        if (item.cliente && item.cliente.trim() !== "") {
+          contCliente[c] = (contCliente[c] || 0) + 1;
+        }
+      });
+
+      document.getElementById('kpiSubCriticos').innerText = `${criticos} ocorrência(s) crítica(s)`;
+
+      const obterLider = (mapa) => {
+        let chaves = Object.keys(mapa);
+        if (chaves.length === 0) return { nome: "-", qtd: 0 };
+        let lider = chaves.reduce((a, b) => mapa[a] >= mapa[b] ? a : b);
+        return { nome: lider, qtd: mapa[lider] };
+      };
+
+      let topDefeito = obterLider(contDefeito);
+      let percDefeito = Math.round((topDefeito.qtd / total) * 100);
+      document.getElementById('kpiPrincipalDefeito').innerText = topDefeito.nome;
+      document.getElementById('kpiSubDefeito').innerText = `${topDefeito.qtd} registo(s) (${percDefeito}% do total)`;
+
+      let topProduto = obterLider(contProduto);
+      document.getElementById('kpiPrincipalProduto').innerText = topProduto.nome;
+      document.getElementById('kpiSubProduto').innerText = `${topProduto.qtd} reclamação(ões)`;
+
+      let topCliente = obterLider(contCliente);
+      document.getElementById('kpiPrincipalCliente').innerText = topCliente.nome;
+      document.getElementById('kpiSubCliente').innerText = topCliente.qtd > 0 ? `${topCliente.qtd} ocorrência(s)` : "Nenhum cliente especificado";
+    }
+
+    // EXPORTAR OS DADOS FILTRADOS PARA EXCEL (.CSV COM SUPORTE A ACENTOS UTF-8)
+    function exportarCSV() {
+      if (!dadosFiltradosAtuais || dadosFiltradosAtuais.length === 0) {
+        alert("Não existem registos filtrados para exportar.");
+        return;
+      }
+
+      let csv = "\uFEFFData;Funcionario;Produto;Cliente;Motivo;Severidade;Observacao\n";
+
+      dadosFiltradosAtuais.forEach(item => {
+        let data = formatarDataExibicao(item.data);
+        let func = (item.funcionario || "").replace(/;/g, ",");
+        let prod = (item.produto || "").replace(/;/g, ",");
+        let cli = (item.cliente || "-").replace(/;/g, ",");
+        let mot = (item.motivo || "").replace(/;/g, ",");
+        let sev = classificarSeveridade(item.motivo).toUpperCase();
+        let obs = (item.obs || "-").replace(/;/g, ",").replace(/\n/g, " ");
+
+        csv += `${data};${func};${prod};${cli};${mot};${sev};${obs}\n`;
+      });
+
+      let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      let link = document.createElement("a");
+      let url = URL.createObjectURL(blob);
+      let hoje = new Date().toISOString().slice(0, 10);
       
-      // ALTA SEVERIDADE (Vermelho Vivo/Escuro)
-      if (m.includes("falha") || m.includes("deforma") || m.includes("tonalidade")) {
-        return `<span class="badge bg-danger px-2 py-1" title="Severidade Alta (Crítico)">🔴 ${motivo}</span>`;
-      }
-      // MÉDIA SEVERIDADE (Laranja/Amarelo)
-      if (m.includes("chupagem") || m.includes("bolha") || m.includes("pinta")) {
-        return `<span class="badge bg-warning text-dark px-2 py-1" title="Severidade Média">🟠 ${motivo}</span>`;
-      }
-      // BAIXA SEVERIDADE / ACABAMENTO (Azul)
-      return `<span class="badge bg-info text-dark px-2 py-1" title="Severidade Leve">🔵 ${motivo}</span>`;
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Relatorio_Reclamacoes_${hoje}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // PREPARAR CABEÇALHO E ACIONAR IMPRESSÃO LIMPA EM PDF / A4 PAISAGEM
+    function imprimirRelatorio() {
+      let agora = new Date();
+      document.getElementById('dataEmissaoPrint').innerText = agora.toLocaleDateString('pt-BR') + " às " + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      let filtrosAtivos = [];
+      let fFunc = document.getElementById('filtroFunc').value;
+      let fProd = document.getElementById('filtroProduto').value;
+      let fCli = document.getElementById('filtroCliente').value;
+      let fSev = document.getElementById('filtroSeveridade');
+      let fMes = document.getElementById('filtroMes');
+
+      if (fFunc) filtrosAtivos.push(`Func: ${fFunc}`);
+      if (fProd) filtrosAtivos.push(`Prod: ${fProd}`);
+      if (fCli) filtrosAtivos.push(`Cliente: ${fCli}`);
+      if (fSev.value !== "todas") filtrosAtivos.push(`Sev: ${fSev.options[fSev.selectedIndex].text}`);
+      if (fMes.value !== "todos") filtrosAtivos.push(`Mês: ${fMes.options[fMes.selectedIndex].text}`);
+
+      document.getElementById('resumoFiltroPrint').innerText = filtrosAtivos.length > 0 ? filtrosAtivos.join(" | ") : "Todos os registos";
+
+      window.print();
     }
 
     function renderizarTabela(dados) {
@@ -411,7 +630,7 @@
             <td>${item.cliente || '-'}</td>
             <td class="text-center">${badgeMotivo}</td>
             <td>${item.obs ? `<span class="text-white">${item.obs}</span>` : '<span class="text-muted">Sem detalhes</span>'}</td>
-            <td class="text-center">
+            <td class="text-center no-print">
               <button class="btn btn-outline-warning btn-sm py-0 px-2 me-1" onclick="abrirModalEdicao(${item.indexOriginal})" title="Editar Reclamação">✏️ Editar</button>
               <button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="excluirReclamacao(${item.indexOriginal})" title="Excluir Reclamação">🗑️ Excluir</button>
             </td>
@@ -455,7 +674,6 @@
       if (chartProd) chartProd.destroy();
       if (chartMotivos) chartMotivos.destroy();
 
-      // GRÁFICO HORIZONTAL DE FUNCIONÁRIO
       chartFunc = new Chart(document.getElementById('graficoFuncionario').getContext('2d'), {
         type: 'bar',
         data: {
@@ -472,7 +690,6 @@
         }
       });
 
-      // GRÁFICO HORIZONTAL DE PRODUTO
       chartProd = new Chart(document.getElementById('graficoProduto').getContext('2d'), {
         type: 'bar',
         data: {
@@ -489,7 +706,6 @@
         }
       });
 
-      // GRÁFICO DE DONUT DE MOTIVOS (CAUSA-RAIZ)
       const coresPaleta = ['#f72585', '#7209b7', '#4361ee', '#4cc9f0', '#ff9f1c', '#e71d36', '#2ec4b6', '#ff99c8'];
 
       chartMotivos = new Chart(document.getElementById('graficoMotivos').getContext('2d'), {
