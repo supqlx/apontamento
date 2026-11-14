@@ -10,22 +10,17 @@
     .card-custom { background-color: #1c2541; border: none; border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-bottom: 20px; }
     .form-control, .form-select { background-color: #0b132b; color: #fff; border: 1px solid #2d3e6b; font-size: 0.85rem; }
     .form-control:focus, .form-select:focus { background-color: #0b132b; color: #fff; border-color: #4cc9f0; box-shadow: none; }
-    
-    /* Estilo personalizado para destacar a fonte do campo de Máquina */
-    .input-maquina {
-      color: #ff9f1c !important; /* Cor amarela/laranja vibrante para destacar */
-      font-weight: bold;
-      text-align: center;
-    }
-    .input-maquina::placeholder {
-      color: #718096 !important;
-      font-weight: normal;
-    }
-
     label, .form-label { color: #4cc9f0 !important; font-size: 0.8rem; font-weight: bold; }
     .table-dark-custom { background-color: #233055; color: #fff; }
     .table-dark-custom th { background-color: #0b132b; color: #4cc9f0; border-color: #2d3e6b; text-align: center; }
     .table-dark-custom td { background-color: #1c2541; color: #fff; border-color: #2d3e6b; vertical-align: middle; }
+    
+    .texto-maquina {
+      color: #ff9f1c;
+      font-weight: bold;
+      font-size: 0.95rem;
+      letter-spacing: 0.5px;
+    }
   </style>
 </head>
 <body>
@@ -63,13 +58,13 @@
         </div>
       </div>
 
-      <!-- TABELA DE FUNCIONÁRIOS E MÁQUINAS (SEM COLUNA DE TURNO INDIVIDUAL) -->
+      <!-- TABELA DE FUNCIONÁRIOS E MÁQUINAS -->
       <div class="table-responsive">
         <table class="table table-dark-custom table-hover">
           <thead>
             <tr>
               <th>Funcionário</th>
-              <th class="text-center" style="width: 160px;">Máquina(s) (1-13)</th>
+              <th class="text-center" style="width: 160px;">Máquina(s)</th>
               <th class="text-center" style="width: 250px;">Ocorrência / Status</th>
               <th>Observações / Justificativa</th>
             </tr>
@@ -119,14 +114,12 @@
       }
 
       lista.forEach((func, idx) => {
-        let maqAtribuida = func.maquina || ''; 
+        let maqTexto = func.maquina && func.maquina !== "-" ? func.maquina : "-";
         
         tbody.innerHTML += `
           <tr data-index="${idx}">
             <td class="fw-bold text-info align-middle">${func.nome}</td>
-            <td class="text-center align-middle">
-              <input type="text" class="form-control input-maquina" value="${maqAtribuida}" placeholder="Ex: 1, 4">
-            </td>
+            <td class="text-center align-middle texto-maquina" data-maquina="${maqTexto}">${maqTexto}</td>
             <td class="text-center align-middle">
               <select class="form-select select-ocorrencia">
                 <option value="Presente (Normal)">Presente (Normal)</option>
@@ -157,12 +150,11 @@
 
       linhas.forEach(linha => {
         let nomeFunc = linha.querySelector('.text-info').innerText;
-        let maquina = linha.querySelector('.input-maquina').value;
+        let maquina = linha.querySelector('.texto-maquina').getAttribute('data-maquina');
         let ocorrencia = linha.querySelector('.select-ocorrencia').value;
         let obs = linha.querySelector('.input-obs').value;
 
-        // Incorpora a informação da máquina na observação enviada para a planilha
-        let obsCompleta = `Máq: ${maquina || 'N/D'}` + (obs ? ` | ${obs}` : '');
+        let obsCompleta = (maquina && maquina !== "-" ? `Máq: ${maquina}` : "") + (obs ? (maquina && maquina !== "-" ? ` | ${obs}` : obs) : "");
 
         apontamentosLote.push({
           data: dataApont,
