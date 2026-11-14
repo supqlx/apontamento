@@ -31,9 +31,9 @@
     .stat-card h6 {
       color: #4cc9f0 !important;
       font-weight: 700 !important;
-      font-size: 0.75rem;
+      font-size: 0.70rem;
       letter-spacing: 0.5px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       text-transform: uppercase;
     }
     .form-control, .form-select { background-color: #0b132b; color: #fff; border: 1px solid #2d3e6b; font-size: 0.85rem; }
@@ -135,45 +135,44 @@
       </div>
     </div>
 
-    <!-- CARDS DE MÉTRICAS -->
+    <!-- CARDS DE MÉTRICAS (6 CARDS ADAPTADOS AO GRID DO BOOTSTRAP) -->
     <div class="row g-3 mb-4">
-      <div class="col-md">
+      <div class="col-md-2 col-sm-4 col-6">
         <div class="stat-card">
           <h6 class="small">Presenças</h6>
-          <h2 id="cardPresencas" class="fs-3 fw-bold text-white mb-0">0</h2>
+          <h2 id="cardPresencas" class="fs-4 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
-      <div class="col-md">
+      <div class="col-md-2 col-sm-4 col-6">
         <div class="stat-card" style="border-left-color: #f72585;">
           <h6 class="small">Total de Faltas</h6>
-          <h2 id="cardFaltas" class="fs-3 fw-bold text-white mb-0">0</h2>
+          <h2 id="cardFaltas" class="fs-4 fw-bold text-white mb-0">0</h2>
         </div>
       </div>
-      <div class="col-md">
+      <div class="col-md-2 col-sm-4 col-6">
         <div class="stat-card" style="border-left-color: #ff5400;">
-          <h6 class="small">Horas de Absenteísmo</h6>
-          <h2 id="cardAbsenteismo" class="fs-3 fw-bold text-white mb-0">0 hrs</h2>
+          <h6 class="small">Absenteísmo</h6>
+          <h2 id="cardAbsenteismo" class="fs-5 fw-bold text-white mb-0">0 hrs</h2>
         </div>
       </div>
-      <div class="col-md">
+      <div class="col-md-2 col-sm-4 col-6">
         <div class="stat-card" style="border-left-color: #4361ee;">
           <h6 class="small">Horas Líquidas</h6>
-          <h2 id="cardHoras" class="fs-3 fw-bold text-white mb-0">0 hrs</h2>
+          <h2 id="cardHoras" class="fs-5 fw-bold text-white mb-0">0 hrs</h2>
         </div>
       </div>
-      <!-- NOVO CARD 5: Horas Totais (Líquidas + Absenteísmo) -->
-  <div class="col-md-2 col-sm-4 col-6">
-    <div class="kpi-card" style="border-left: 5px solid #2ec4b6;">
-      <span class="kpi-title" style="color: #2ec4b6;">HORAS TOTAIS (MÊS)</span>
-      <span class="kpi-value" id="kpiHorasTotais">0h 0m</span>
-      <span class="kpi-sub" style="font-size: 0.7rem; color: #a0aec0;">Líquidas + Absenteísmo</span>
-    </div>
-  </div>
-      <div class="col-md">
+      <div class="col-md-2 col-sm-4 col-6">
+        <div class="stat-card" style="border-left-color: #2ec4b6;">
+          <h6 class="small">Horas Totais (Mês)</h6>
+          <h2 id="cardHorasTotais" class="fs-5 fw-bold text-white mb-0">0 hrs</h2>
+          <small class="text-muted" style="font-size: 0.65rem;">Líq. + Absenteísmo</small>
+        </div>
+      </div>
+      <div class="col-md-2 col-sm-4 col-6">
         <div class="stat-card" style="border-left-color: #ff9f1c;">
           <h6 class="small">Inativos / Demitidos</h6>
-          <h2 id="cardInativosTotal" class="fs-5 fw-bold text-white mb-1">0 inativo(s)</h2>
-          <small id="cardInativosDetalhe" class="text-warning" style="font-size: 0.7rem;">Nenhum registo</small>
+          <h2 id="cardInativosTotal" class="fs-6 fw-bold text-white mb-1">0 inativo(s)</h2>
+          <small id="cardInativosDetalhe" class="text-warning" style="font-size: 0.65rem;">Nenhum registo</small>
         </div>
       </div>
     </div>
@@ -592,6 +591,10 @@
       document.getElementById('cardFaltas').innerText = faltas;
       document.getElementById('cardAbsenteismo').innerText = formatarHorasMinutos(totalMinutosAbsenteismo);
       document.getElementById('cardHoras').innerText = formatarHorasMinutos(totalMinutosTrabalhados);
+      
+      // SOMA AUTOMÁTICA DAS HORAS TOTAIS (LÍQUIDAS + ABSENTEÍSMO)
+      let totalMinutosPrevistos = totalMinutosTrabalhados + totalMinutosAbsenteismo;
+      document.getElementById('cardHorasTotais').innerText = formatarHorasMinutos(totalMinutosPrevistos);
 
       let totalInativosQtd = dadosInativosGlobal.length;
       let totalHorasInativos = dadosInativosGlobal.reduce((acc, curr) => acc + (Number(curr.horas) || 0), 0);
