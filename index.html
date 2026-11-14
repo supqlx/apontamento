@@ -38,39 +38,45 @@
       </div>
     </div>
 
-    <!-- PAINEL DE LANÇAMENTO EM LOTE -->
+    <!-- PAINEL DE CONTROLO E FILTROS -->
     <div class="card card-custom">
       <div class="row g-3 align-items-end mb-3">
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label">Data do Apontamento:</label>
           <input type="text" id="dataApontamento" class="form-control" placeholder="DD/MM/AAAA">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Turno Padrão (Aplicado a Todos):</label>
-          <select id="turnoGlobal" class="form-select">
+          <label class="form-label">Filtrar por Turno:</label>
+          <select id="filtroTurno" class="form-select" onchange="filtrarPorTurno()">
+            <option value="todos">Todos os Turnos</option>
             <option value="06h às 14h">06h às 14h (1º Turno)</option>
-            <option value="14h às 22h" selected>14h às 22h (2º Turno)</option>
+            <option value="14h às 22h">14h às 22h (2º Turno)</option>
             <option value="22h às 06h">22h às 06h (3º Turno)</option>
           </select>
         </div>
-        <div class="col-md-6 text-end">
-          <button class="btn btn-success fw-bold px-4" onclick="salvarApontamentosLote()">💾 Gravar Apontamentos do Dia</button>
+        <div class="col-md-3">
+          <label class="form-label">Ação Rápida:</label>
+          <button class="btn btn-outline-info w-100 btn-sm py-2 fw-bold" onclick="marcarPresencaTodos()">✅ Marcar Presença para Todos</button>
+        </div>
+        <div class="col-md-4 text-end">
+          <button class="btn btn-success fw-bold px-4 py-2" onclick="salvarApontamentosLote()">💾 Gravar Apontamentos do Dia</button>
         </div>
       </div>
 
-      <!-- TABELA DE FUNCIONÁRIOS E MÁQUINAS -->
+      <!-- TABELA DE FUNCIONÁRIOS -->
       <div class="table-responsive">
         <table class="table table-dark-custom table-hover">
           <thead>
             <tr>
               <th>Funcionário</th>
-              <th class="text-center" style="width: 160px;">Máquina(s)</th>
-              <th class="text-center" style="width: 250px;">Ocorrência / Status</th>
+              <th class="text-center" style="width: 140px;">Máquina(s)</th>
+              <th class="text-center" style="width: 180px;">Turno</th>
+              <th class="text-center" style="width: 220px;">Ocorrência / Status</th>
               <th>Observações / Justificativa</th>
             </tr>
           </thead>
           <tbody id="tabelaApontamentos">
-            <tr><td colspan="4" class="text-center text-muted">A carregar funcionários da aba Resumo...</td></tr>
+            <tr><td colspan="5" class="text-center text-muted">A carregar funcionários da aba Resumo...</td></tr>
           </tbody>
         </table>
       </div>
@@ -100,7 +106,7 @@
         })
         .catch(err => {
           console.error("Erro ao carregar funcionários:", err);
-          document.getElementById('tabelaApontamentos').innerHTML = `<tr><td colspan="4" class="text-center text-danger">Erro ao comunicar com o Google Sheets.</td></tr>`;
+          document.getElementById('tabelaApontamentos').innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro ao comunicar com o Google Sheets.</td></tr>`;
         });
     }
 
@@ -109,17 +115,19 @@
       tbody.innerHTML = '';
 
       if (!lista || lista.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Nenhum funcionário encontrado na aba Resumo.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Nenhum funcionário encontrado.</td></tr>`;
         return;
       }
 
       lista.forEach((func, idx) => {
         let maqTexto = func.maquina && func.maquina !== "-" ? func.maquina : "-";
+        let turnoFunc = func.turno || "06h às 14h";
         
         tbody.innerHTML += `
-          <tr data-index="${idx}">
+          <tr data-index="${idx}" data-turno="${turnoFunc}">
             <td class="fw-bold text-info align-middle">${func.nome}</td>
             <td class="text-center align-middle texto-maquina" data-maquina="${maqTexto}">${maqTexto}</td>
+            <td class="text-center align-middle text-warning small">${turnoFunc}</td>
             <td class="text-center align-middle">
               <select class="form-select select-ocorrencia">
                 <option value="Presente (Normal)">Presente (Normal)</option>
@@ -136,10 +144,32 @@
       });
     }
 
+    function filtrarPorTurno() {
+      let turnoSelecionado = document.getElementById('filtroTurno').value;
+      let linhas = document.querySelectorAll('#tabelaApontamentos tr[data-index]');
+
+      linhas.forEach(linha => {
+        let turnoLinha = linha.getAttribute('data-turno');
+        if (turnoSelecionado === "todos" || turnoLinha === turnoSelecionado) {
+          linha.style.display = "";
+        } else {
+          linha.style.display = "none";
+        }
+      });
+    }
+
+    function marcarPresencaTodos() {
+      let linhasVisiveis = document.querySelectorAll('#tabelaApontamentos tr[data-index]');
+      linhasVisiveis.forEach(linha => {
+        if (linha.style.display !== "none") {
+          let select = linha.querySelector('.select-ocorrencia');
+          if (select) select.value = "Presente (Normal)";
+        }
+      });
+    }
+
     function salvarApontamentosLote() {
       let dataApont = document.getElementById('dataApontamento').value;
-      let turnoGlobal = document.getElementById('turnoGlobal').value;
-
       if (!dataApont) {
         alert("Por favor, preencha a data do apontamento.");
         return;
@@ -149,8 +179,12 @@
       let apontamentosLote = [];
 
       linhas.forEach(linha => {
+        // Ignora linhas ocultas pelo filtro de turno
+        if (linha.style.display === "none") return;
+
         let nomeFunc = linha.querySelector('.text-info').innerText;
         let maquina = linha.querySelector('.texto-maquina').getAttribute('data-maquina');
+        let turnoLinha = linha.getAttribute('data-turno');
         let ocorrencia = linha.querySelector('.select-ocorrencia').value;
         let obs = linha.querySelector('.input-obs').value;
 
@@ -159,11 +193,16 @@
         apontamentosLote.push({
           data: dataApont,
           nome: nomeFunc,
-          turno: turnoGlobal,
+          turno: turnoLinha,
           ocorrencia: ocorrencia,
           obs: obsCompleta
         });
       });
+
+      if (apontamentosLote.length === 0) {
+        alert("Nenhum funcionário visível para gravar.");
+        return;
+      }
 
       let payload = {
         action: "salvarLote",
