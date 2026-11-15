@@ -237,9 +237,9 @@
       <h4 class="text-info mb-3">⚙️ Gestão de Apontamento</h4>
       <form id="formModalEdicao" onsubmit="salvarEdicaoModal(event)">
         <div class="mb-3">
-          <label class="form-label fw-bold">Funcionário:</label>
-          <input type="text" id="modalNome" class="form-control" readonly>
-        </div>
+  <label class="form-label fw-bold">Funcionário:</label>
+  <input type="text" id="modalNome" class="form-control" list="listaFuncionarios" required placeholder="Digite ou selecione o funcionário...">
+</div>
         <div class="mb-3">
           <label class="form-label fw-bold">Data (DD/MM/AAAA):</label>
           <input type="text" id="modalData" class="form-control" required placeholder="Ex: 07/11/2026">
@@ -369,30 +369,29 @@
       }
     }
 
-    function abrirModalCorrecao(nomePredefinido = "") {
-      let nomeFunc = nomePredefinido;
-      if (!nomeFunc) {
-        nomeFunc = prompt("Nome completo do funcionário:");
-        if (!nomeFunc) return;
-      }
+   function abrirModalCorrecao(nomePredefinido = "") {
+  let hoje = new Date();
+  let dia = String(hoje.getDate()).padStart(2, '0');
+  let mes = String(hoje.getMonth() + 1).padStart(2, '0');
+  let ano = hoje.getFullYear();
+  let dataSugerida = `${dia}/${mes}/${ano}`;
 
-      let hoje = new Date();
-      let dia = String(hoje.getDate()).padStart(2, '0');
-      let mes = String(hoje.getMonth() + 1).padStart(2, '0');
-      let ano = hoje.getFullYear();
-      let dataSugerida = `${dia}/${mes}/${ano}`;
+  const inputNome = document.getElementById('modalNome');
+  inputNome.value = nomePredefinido ? nomePredefinido.trim().toUpperCase() : "";
+  
+  // Se vier do gráfico, bloqueia o nome; se vier do botão "Lançamento Manual", permite escolher
+  inputNome.readOnly = Boolean(nomePredefinido);
 
-      document.getElementById('modalNome').value = nomeFunc.trim().toUpperCase();
-      document.getElementById('modalData').value = dataSugerida;
-      document.getElementById('modalTurno').value = "06h às 14h";
-      document.getElementById('modalOcorrencia').value = "Presente";
-      document.getElementById('modalHoraInicio').value = "";
-      document.getElementById('modalHoraFim').value = "";
-      document.getElementById('modalObs').value = "";
+  document.getElementById('modalData').value = dataSugerida;
+  document.getElementById('modalTurno').value = "06h às 14h";
+  document.getElementById('modalOcorrencia').value = "Presente";
+  document.getElementById('modalHoraInicio').value = "";
+  document.getElementById('modalHoraFim').value = "";
+  document.getElementById('modalObs').value = "";
 
-      verificarOcorrenciaModal();
-      document.getElementById('modalEdicao').style.display = 'flex';
-    }
+  verificarOcorrenciaModal();
+  document.getElementById('modalEdicao').style.display = 'flex';
+}
 
     function verificarOcorrenciaModal() {
       const oc = document.getElementById('modalOcorrencia').value;
