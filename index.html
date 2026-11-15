@@ -67,6 +67,26 @@
   </style>
 </head>
 <body>
+  <!-- TELA DE BLOQUEIO / LOGIN -->
+<div id="telaLogin" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #0b132b; z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 20px;">
+  <div style="background-color: #1c2541; border: 1px solid #4cc9f0; border-radius: 12px; padding: 30px; width: 100%; max-width: 380px; box-shadow: 0 8px 25px rgba(0,0,0,0.6);">
+    <h4 class="text-info text-center mb-1">🔒 Acesso Restrito</h4>
+    <p class="small text-center text-white mb-4">Controle de Produção e Qualidade</p>
+    
+    <form onsubmit="realizarLogin(event)">
+      <div class="mb-3">
+        <label class="form-label fw-bold">Usuário:</label>
+        <input type="text" id="loginUsuario" class="form-control text-start" required placeholder="Digite seu usuário...">
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">Senha:</label>
+        <input type="password" id="loginSenha" class="form-control text-start" required placeholder="••••••••">
+      </div>
+      <div id="msgErroLogin" class="text-danger small text-center mb-3" style="display: none;"></div>
+      <button type="submit" id="btnEntrar" class="btn btn-info w-100 fw-bold">Entrar no Sistema</button>
+    </form>
+  </div>
+</div>
 
   <div class="container-fluid">
     <!-- CABEÇALHO -->
@@ -152,28 +172,54 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbyt0-k9jkWcIHe4nQcgjyWe_PADniW1q1SLLB3gdPbHKcXIjllPyZVpRl7C-mQ1cp32_w/exec";
     let totalFuncionarios = 0;
 
+    // Verifica se o usuário já fez login nesta sessão
+document.addEventListener("DOMContentLoaded", () => {
+  if (sessionStorage.getItem("usuarioLogado")) {
+    document.getElementById("telaLogin").style.display = "none";
+  }
+});
+
+function realizarLogin(event) {
+  event.preventDefault();
+  const usuario = document.getElementById("loginUsuario").value.trim();
+  const senha = document.getElementById("loginSenha").value.trim();
+  const btn = document.getElementById("btnEntrar");
+  const msgErro = document.getElementById("msgErroLogin");
+
+  btn.disabled = true;
+  btn.innerText = "Verificando...";
+  msgErro.style.display = "none";
+
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({ action: "login", usuario: usuario, senha: senha }),
+    headers: { "Content-Type": "text/plain;charset=utf-8" }
+  })
+  .then(res => res.json())
+  .then(resp => {
+    if (resp.autorizado) {
+      sessionStorage.setItem("usuarioLogado", resp.usuario);
+      sessionStorage.setItem("perfilUsuario", resp.perfil);
+      document.getElementById("telaLogin").style.display = "none";
+    } else {
+      msgErro.innerText = resp.mensagem || "Usuário ou senha incorretos.";
+      msgErro.style.display = "block";
+    }
+  })
+  .catch(() => {
+    msgErro.innerText = "Erro de conexão ao validar acesso.";
+    msgErro.style.display = "block";
+  })
+  .finally(() => {
+    btn.disabled = false;
+    btn.innerText = "Entrar no Sistema";
+  });
+}
+
     window.onload = function() {
       document.getElementById('dataApontamento').valueAsDate = new Date();
       carregarDados();
     };
-    // --- PROTEÇÃO POR SENHA ---
-window.addEventListener('DOMContentLoaded', () => {
-  // Define a sua senha de segurança aqui
-  const SENHA_MESTRA = "sup33@"; 
-
-  // Verifica se já foi autenticado nesta sessão do navegador
-  if (sessionStorage.getItem('autenticado') !== 'true') {
-    let senhaDigitada = prompt("⚠️ Acesso Restrito!\nDigite a senha de segurança para aceder ao sistema:");
-    
-    if (senhaDigitada === SENHA_MESTRA) {
-      sessionStorage.setItem('autenticado', 'true');
-    } else {
-      alert("Senha incorreta! Acesso negado.");
-      // Redireciona para outra página ou fecha/limpa o ecrã
-      window.location.href = "index.html"; 
-    }
-  }
-});
 
     function carregarDados() {
       fetch(`${API_URL}?action=getFuncionarios`)
