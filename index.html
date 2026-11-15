@@ -156,6 +156,24 @@
       document.getElementById('dataApontamento').valueAsDate = new Date();
       carregarDados();
     };
+    // --- PROTEÇÃO POR SENHA ---
+window.addEventListener('DOMContentLoaded', () => {
+  // Define a sua senha de segurança aqui
+  const SENHA_MESTRA = "sup33@"; 
+
+  // Verifica se já foi autenticado nesta sessão do navegador
+  if (sessionStorage.getItem('autenticado') !== 'true') {
+    let senhaDigitada = prompt("⚠️ Acesso Restrito!\nDigite a senha de segurança para aceder ao sistema:");
+    
+    if (senhaDigitada === SENHA_MESTRA) {
+      sessionStorage.setItem('autenticado', 'true');
+    } else {
+      alert("Senha incorreta! Acesso negado.");
+      // Redireciona para outra página ou fecha/limpa o ecrã
+      window.location.href = "index.html"; 
+    }
+  }
+});
 
     function carregarDados() {
       fetch(`${API_URL}?action=getFuncionarios`)
